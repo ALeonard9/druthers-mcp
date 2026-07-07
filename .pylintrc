@@ -1,0 +1,6 @@
+[MASTER]
+ignore=.venv
+ignore-paths=^\.venv/.*$
+
+[MESSAGES CONTROL]
+disable=too-few-public-methods,invalid-name,R0801

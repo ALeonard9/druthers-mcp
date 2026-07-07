@@ -1,0 +1,35 @@
+fail_fast: true
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: debug-statements
+      - id: check-added-large-files
+        args: [--maxkb=200]
+      - id: double-quote-string-fixer
+      - id: mixed-line-ending
+      - id: no-commit-to-branch
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        args: [--skip-string-normalization]
+  - repo: local
+    hooks:
+      - id: pylint
+        name: pylint
+        entry: ./.venv/bin/pylint
+        language: system
+        types: [python]
+        args: [--disable=too-few-public-methods]
+      - id: pytest
+        name: pytest
+        entry: ./.venv/bin/pytest tests -q
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true

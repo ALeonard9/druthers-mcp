@@ -1,0 +1,38 @@
+version: '3'
+
+# Matches the aleonard.us-api / -web task interface for a consistent DX.
+tasks:
+  default:
+    desc: 'List all available tasks'
+    cmds:
+      - task -l
+
+  run:
+    desc: 'Run the MCP server (stdio)'
+    cmds:
+      - python -m aleonard_mcp.server
+
+  dev:
+    desc: 'Run the MCP server under the MCP Inspector'
+    cmds:
+      - mcp dev aleonard_mcp/server.py
+
+  test:
+    desc: 'Run pytest'
+    cmds:
+      - pytest tests -q
+
+  lint:
+    desc: 'Run pylint'
+    cmds:
+      - pylint aleonard_mcp tests
+
+  format:
+    desc: 'Format with black (single quotes)'
+    cmds:
+      - black --skip-string-normalization aleonard_mcp tests
+
+  build:
+    desc: 'Build the Docker image'
+    cmds:
+      - docker build -t ghcr.io/aleonard9/aleonard.us-mcp:dev .
