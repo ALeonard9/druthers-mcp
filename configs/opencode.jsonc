@@ -1,0 +1,9 @@
+{
+  "mcp": {
+    "aleonard-us": {
+      "type": "local",
+      "command": ["/Users/adam/dev/aleonard.us-mcp/bin/aleonard-mcp"],
+      "enabled": true
+    }
+  }
+}

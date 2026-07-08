@@ -38,6 +38,17 @@ def test_add_movie_returns_confirmation(mock_client):
 
 
 @patch('aleonard_mcp.server.client')
+def test_movie_detail_passthrough(mock_client):
+    mock_client.return_value.get_movie_detail.return_value = {
+        'title': 'The Matrix',
+        'director': 'The Wachowskis',
+    }
+    out = server.movie_detail('m-1')
+    assert out['director'] == 'The Wachowskis'
+    mock_client.return_value.get_movie_detail.assert_called_once_with('m-1')
+
+
+@patch('aleonard_mcp.server.client')
 def test_mark_watched_updates_tracker(mock_client):
     server.mark_watched('m-1', watched=True)
     mock_client.return_value.update_tracker.assert_called_once_with('m-1', completed=1)

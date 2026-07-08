@@ -1,0 +1,5 @@
+#!/bin/sh
+# Launcher for the aleonard.us MCP server (stdio). Sources local env + venv.
+cd "$(dirname "$0")/.." || exit 1
+if [ -f env/local.env ]; then set -a; . ./env/local.env; set +a; fi
+exec .venv/bin/python -m aleonard_mcp.server

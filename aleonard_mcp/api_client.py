@@ -86,6 +86,10 @@ class ApiClient:
         """Return the authenticated user's tracked movies."""
         return self._request('GET', '/v1/users/me/movies')
 
+    def get_movie_detail(self, movie_id: str) -> dict:
+        """Return full detail (plot, director, cast, genre, ...) for a movie."""
+        return self._request('GET', f'/v1/movies/{movie_id}')
+
     def _ensure_catalog_movie(
         self, imdb: str, title: str, poster_url: Optional[str]
     ) -> dict:

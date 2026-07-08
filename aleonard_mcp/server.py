@@ -63,6 +63,15 @@ def list_my_movies() -> list[dict]:
 
 
 @mcp.tool()
+def movie_detail(movie_id: str) -> dict:
+    """
+    Get full detail for a movie (plot, director, cast, genre, year, runtime,
+    rating). `movie_id` is the id from `list_my_movies`.
+    """
+    return client().get_movie_detail(movie_id)
+
+
+@mcp.tool()
 def add_movie(imdb_id: str, title: str, poster_url: Optional[str] = None) -> str:
     """
     Add a movie to the user's list (as a watchlist item). Provide the imdb id

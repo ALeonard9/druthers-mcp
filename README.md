@@ -12,9 +12,19 @@ can manage them on your behalf. Backed by
 |------|-------------|
 | `search_movies(query)` | Search the catalog (OMDB proxy) by title. |
 | `list_my_movies()` | List your tracked movies with watched status + notes. |
+| `movie_detail(movie_id)` | Full detail: plot, director, cast, genre, year, rating. |
 | `add_movie(imdb_id, title, poster_url?)` | Add a movie to your watchlist. |
 | `mark_watched(movie_id, watched=True)` | Toggle a movie's watched flag. |
 | `set_note(movie_id, note)` | Set your personal note on a movie. |
+
+## Register it (Claude, Antigravity, OpenCode)
+
+The launcher `bin/aleonard-mcp` sources `env/local.env` and runs the server over
+stdio. See [`configs/`](configs/) for per-tool snippets. Quick start for Claude Code:
+
+```bash
+claude mcp add aleonard-us --scope user -- /Users/adam/dev/aleonard.us-mcp/bin/aleonard-mcp
+```
 
 ## Run
 
