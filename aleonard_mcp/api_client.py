@@ -27,8 +27,8 @@ class ApiClient:  # pylint: disable=too-many-public-methods
     Authenticated client for the aleonard.us API.
 
     A deliberately flat wrapper — one method per endpoint, grouped by domain
-    (movies/tv/books/countries), so it grows past pylint's method ceiling by
-    design.
+    (movies/tv/books/countries/games), so it grows past pylint's method
+    ceiling by design.
     """
 
     def __init__(
@@ -267,6 +267,50 @@ class ApiClient:  # pylint: disable=too-many-public-methods
     def update_country_tracker(self, country_id: str, **fields) -> dict:
         """Update the user's tracker for a catalog country id."""
         return self._request('PUT', f'/v1/users/me/countries/{country_id}', json=fields)
+
+    # --- games ---
+    def search_games(self, query: str) -> list[dict]:
+        """Search the catalog (IGDB proxy) for games matching ``query``."""
+        return self._request('GET', '/v1/games/search', params={'q': query})
+
+    def list_my_games(self) -> list[dict]:
+        """Return the authenticated user's tracked games."""
+        return self._request('GET', '/v1/users/me/games')
+
+    def get_game_detail(self, game_id: str) -> dict:
+        """Return full detail (summary, genres, platforms, ...) for a game."""
+        return self._request('GET', f'/v1/games/{game_id}')
+
+    def _ensure_catalog_game(
+        self, igdb: int, title: str, poster_url: Optional[str]
+    ) -> dict:
+        """Create the catalog game if needed (admin), else find it by igdb id."""
+        try:
+            return self._request(
+                'POST',
+                '/v1/games',
+                json={'igdb': igdb, 'title': title, 'poster_url': poster_url},
+            )
+        except ApiError as err:
+            if err.status != 400:
+                raise
+            for game in self._request('GET', '/v1/games'):
+                if game['igdb'] == igdb:
+                    return game
+            raise
+
+    def add_game(self, igdb: int, title: str, poster_url: Optional[str] = None) -> dict:
+        """Add a game (by IGDB id) to the user's list as a backlog item."""
+        game = self._ensure_catalog_game(igdb, title, poster_url)
+        return self._request(
+            'POST',
+            f'/v1/users/me/games/{game["id"]}',
+            json={'on_watchlist': True},
+        )
+
+    def update_game_tracker(self, game_id: str, **fields) -> dict:
+        """Update the user's tracker for a catalog game id."""
+        return self._request('PUT', f'/v1/users/me/games/{game_id}', json=fields)
 
 
 def _detail(resp: httpx.Response) -> str:
