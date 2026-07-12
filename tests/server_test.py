@@ -147,3 +147,82 @@ def test_set_tv_note_updates_tracker(mock_client):
     mock_client.return_value.update_tv_tracker.assert_called_once_with(
         's-1', notes='rewatch with kids'
     )
+
+
+@patch('aleonard_mcp.server.client')
+def test_list_my_books_shapes_output(mock_client):
+    mock_client.return_value.list_my_books.return_value = [
+        {
+            'book': {'id': 'b-1', 'title': 'Dune', 'authors': 'Frank Herbert'},
+            'on_watchlist': False,
+            'on_rankings': True,
+            'rank': 7,
+            'notes': 'spice',
+        }
+    ]
+    out = server.list_my_books()
+    assert out == [
+        {
+            'book_id': 'b-1',
+            'title': 'Dune',
+            'authors': 'Frank Herbert',
+            'on_watchlist': False,
+            'on_rankings': True,
+            'rank': 7,
+            'notes': 'spice',
+        }
+    ]
+
+
+@patch('aleonard_mcp.server.client')
+def test_add_book_returns_confirmation(mock_client):
+    mock_client.return_value.add_book.return_value = {'id': 't-1'}
+    msg = server.add_book('9780441172719', 'Dune')
+    assert 'Dune' in msg
+    mock_client.return_value.add_book.assert_called_once_with(
+        '9780441172719', 'Dune', None
+    )
+
+
+@patch('aleonard_mcp.server.client')
+def test_mark_country_by_code(mock_client):
+    mock_client.return_value.list_countries.return_value = [
+        {'id': 'c-1', 'title': 'Japan', 'country_code': 'jp'},
+        {'id': 'c-2', 'title': 'Iceland', 'country_code': 'is'},
+    ]
+    msg = server.mark_country('JP', visited=True, first_visited='2019-04-02')
+    assert 'Japan' in msg and 'visited' in msg
+    mock_client.return_value.mark_country.assert_called_once_with(
+        'c-1',
+        on_rankings=True,
+        on_watchlist=False,
+        first_visited='2019-04-02T00:00:00',
+    )
+
+
+@patch('aleonard_mcp.server.client')
+def test_mark_country_unknown_code(mock_client):
+    mock_client.return_value.list_countries.return_value = []
+    msg = server.mark_country('zz', bucket_list=True)
+    assert 'No country' in msg
+    mock_client.return_value.mark_country.assert_not_called()
+
+
+@patch('aleonard_mcp.server.client')
+def test_list_my_countries_shapes_output(mock_client):
+    mock_client.return_value.list_my_countries.return_value = [
+        {
+            'country': {'id': 'c-1', 'title': 'Japan', 'flag_emoji': '🇯🇵'},
+            'on_rankings': True,
+            'on_watchlist': False,
+            'rank': 3,
+            'first_visited': '2019-04-02T00:00:00',
+            'notes': None,
+        }
+    ]
+    out = server.list_my_countries()
+    assert out[0]['title'] == 'Japan'
+    assert out[0]['visited'] is True
+    assert out[0]['on_bucket_list'] is False
+    assert out[0]['flag'] == '🇯🇵'
+    assert out[0]['rank'] == 3
