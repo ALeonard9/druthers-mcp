@@ -1,9 +1,10 @@
 """
 aleonard.us MCP server.
 
-Exposes the personal Movies tracker as MCP tools backed by the aleonard.us API,
-so an LLM (e.g. Claude) can search, list, add, and annotate movies on the user's
-behalf. Runs over stdio.
+Exposes the personal Movies and TV trackers as MCP tools backed by the
+aleonard.us API, so an LLM (e.g. Claude) can search, list, add, and annotate
+movies and TV shows (including episode watch marks) on the user's behalf.
+Runs over stdio.
 """
 
 import logging
@@ -99,6 +100,110 @@ def set_note(movie_id: str, note: str) -> str:
     """
     client().update_tracker(movie_id, notes=note)
     return f'Updated notes for movie {movie_id}.'
+
+
+@mcp.tool()
+def search_tv_shows(query: str) -> list[dict]:
+    """
+    Search for TV shows by title. Returns candidates with their TVMaze id,
+    imdb id, title, year, status, and network. Use the TVMaze id + title with
+    `add_tv_show`.
+    """
+    return client().search_tv_shows(query)
+
+
+@mcp.tool()
+def list_my_tv_shows() -> list[dict]:
+    """
+    List the TV shows the user is tracking, with list membership (watchlist /
+    rankings), rank, and notes.
+    """
+    shows = client().list_my_tv_shows()
+    return [
+        {
+            'show_id': s['tv_show']['id'],
+            'title': s['tv_show']['title'],
+            'status': s['tv_show'].get('status'),
+            'on_watchlist': s.get('on_watchlist'),
+            'on_rankings': s.get('on_rankings'),
+            'rank': s.get('rank'),
+            'notes': s.get('notes'),
+        }
+        for s in shows
+    ]
+
+
+@mcp.tool()
+def tv_show_detail(show_id: str) -> dict:
+    """
+    Get full detail for a TV show (summary, genres, network, premiere year,
+    status, rating). `show_id` is the id from `list_my_tv_shows`.
+    """
+    return client().get_tv_show_detail(show_id)
+
+
+@mcp.tool()
+def add_tv_show(
+    tvmaze_id: int,
+    title: str,
+    imdb_id: Optional[str] = None,
+    poster_url: Optional[str] = None,
+) -> str:
+    """
+    Add a TV show to the user's watchlist. Provide the TVMaze id and title,
+    e.g. from `search_tv_shows`.
+    """
+    client().add_tv_show(tvmaze_id, title, imdb_id, poster_url)
+    return f'Added "{title}" to your TV watchlist.'
+
+
+@mcp.tool()
+def set_tv_note(show_id: str, note: str) -> str:
+    """
+    Set (or replace) your personal note on a tracked TV show. `show_id` is the
+    id from `list_my_tv_shows`.
+    """
+    client().update_tv_tracker(show_id, notes=note)
+    return f'Updated notes for TV show {show_id}.'
+
+
+@mcp.tool()
+def show_episodes(show_id: str, season: Optional[int] = None) -> list[dict]:
+    """
+    List a tracked show's episodes (optionally one season) with the user's
+    watched flag on each. `show_id` is the id from `list_my_tv_shows`.
+    """
+    episodes = client().list_show_episodes(show_id)
+    watched_ids = {
+        m['episode']['id']
+        for m in client().list_my_episode_marks(show_id)
+        if m.get('watched')
+    }
+    return [
+        {
+            'episode_id': e['id'],
+            'season': e.get('season'),
+            'episode': e.get('season_number'),
+            'title': e['title'],
+            'airdate': e.get('airdate'),
+            'watched': e['id'] in watched_ids,
+        }
+        for e in episodes
+        if season is None or e.get('season') == season
+    ]
+
+
+@mcp.tool()
+def mark_episode_watched(episode_id: str, watched: bool = True) -> str:
+    """
+    Mark a TV episode watched (or clear the mark). `episode_id` is the id from
+    `show_episodes`.
+    """
+    if watched:
+        client().mark_episode(episode_id)
+    else:
+        client().unmark_episode(episode_id)
+    return f'Marked episode {episode_id} as {"watched" if watched else "unwatched"}.'
 
 
 def main() -> None:

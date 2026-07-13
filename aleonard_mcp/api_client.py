@@ -123,6 +123,82 @@ class ApiClient:
         """Update the user's tracker for a catalog movie id."""
         return self._request('PUT', f'/v1/users/me/movies/{movie_id}', json=fields)
 
+    # --- tv ---
+    def search_tv_shows(self, query: str) -> list[dict]:
+        """Search the catalog (TVMaze proxy) for TV shows matching ``query``."""
+        return self._request('GET', '/v1/tv-shows/search', params={'q': query})
+
+    def list_my_tv_shows(self) -> list[dict]:
+        """Return the authenticated user's tracked TV shows."""
+        return self._request('GET', '/v1/users/me/tv-shows')
+
+    def get_tv_show_detail(self, show_id: str) -> dict:
+        """Return full detail (summary, genres, network, ...) for a show."""
+        return self._request('GET', f'/v1/tv-shows/{show_id}')
+
+    def _ensure_catalog_show(
+        self,
+        tvmaze: int,
+        title: str,
+        imdb: Optional[str],
+        poster_url: Optional[str],
+    ) -> dict:
+        """Create the catalog show if needed (admin), else find it by tvmaze id."""
+        try:
+            return self._request(
+                'POST',
+                '/v1/tv-shows',
+                json={
+                    'tvmaze': tvmaze,
+                    'title': title,
+                    'imdb': imdb,
+                    'poster_url': poster_url,
+                },
+            )
+        except ApiError as err:
+            if err.status != 400:
+                raise
+            # Create dedups on tvmaze OR imdb, so re-find on either key.
+            for show in self._request('GET', '/v1/tv-shows'):
+                if show['tvmaze'] == tvmaze or (imdb and show.get('imdb') == imdb):
+                    return show
+            raise
+
+    def add_tv_show(
+        self,
+        tvmaze: int,
+        title: str,
+        imdb: Optional[str] = None,
+        poster_url: Optional[str] = None,
+    ) -> dict:
+        """Add a show (by TVMaze id) to the user's list as a watchlist item."""
+        show = self._ensure_catalog_show(tvmaze, title, imdb, poster_url)
+        return self._request(
+            'POST',
+            f'/v1/users/me/tv-shows/{show["id"]}',
+            json={'on_watchlist': True},
+        )
+
+    def update_tv_tracker(self, show_id: str, **fields) -> dict:
+        """Update the user's tracker for a catalog show id."""
+        return self._request('PUT', f'/v1/users/me/tv-shows/{show_id}', json=fields)
+
+    def list_show_episodes(self, show_id: str) -> list[dict]:
+        """Return the catalog episode list for a show."""
+        return self._request('GET', f'/v1/tv-shows/{show_id}/episodes')
+
+    def list_my_episode_marks(self, show_id: str) -> list[dict]:
+        """Return the user's watched marks for a show's episodes."""
+        return self._request('GET', f'/v1/users/me/tv-shows/{show_id}/episodes')
+
+    def mark_episode(self, episode_id: str) -> dict:
+        """Mark an episode watched (idempotent)."""
+        return self._request('POST', f'/v1/users/me/episodes/{episode_id}')
+
+    def unmark_episode(self, episode_id: str) -> None:
+        """Remove the watched mark from an episode."""
+        return self._request('DELETE', f'/v1/users/me/episodes/{episode_id}')
+
 
 def _detail(resp: httpx.Response) -> str:
     try:
