@@ -209,6 +209,61 @@ def test_mark_country_unknown_code(mock_client):
 
 
 @patch('aleonard_mcp.server.client')
+def test_list_my_games_shapes_output(mock_client):
+    mock_client.return_value.list_my_games.return_value = [
+        {
+            'game': {'id': 'g-1', 'title': 'Breath of the Wild'},
+            'on_watchlist': False,
+            'on_rankings': True,
+            'rank': 4,
+            'is_100_percent': True,
+            'notes': 'korok hell',
+        }
+    ]
+    out = server.list_my_games()
+    assert out == [
+        {
+            'game_id': 'g-1',
+            'title': 'Breath of the Wild',
+            'on_watchlist': False,
+            'on_rankings': True,
+            'rank': 4,
+            'is_100_percent': True,
+            'notes': 'korok hell',
+        }
+    ]
+
+
+@patch('aleonard_mcp.server.client')
+def test_add_game_returns_confirmation(mock_client):
+    mock_client.return_value.add_game.return_value = {'id': 't-1'}
+    msg = server.add_game(1234, 'Breath of the Wild')
+    assert 'Breath of the Wild' in msg
+    mock_client.return_value.add_game.assert_called_once_with(
+        1234, 'Breath of the Wild', None
+    )
+
+
+@patch('aleonard_mcp.server.client')
+def test_search_games_handles_unconfigured(mock_client):
+    mock_client.return_value.search_games.side_effect = ApiError(503, 'nope')
+    out = server.search_games('zelda')
+    assert out[0]['error']
+
+
+@patch('aleonard_mcp.server.client')
+def test_mark_game_100_percent(mock_client):
+    server.mark_game_100_percent('g-1')
+    mock_client.return_value.update_game_tracker.assert_called_once_with(
+        'g-1', is_100_percent=True
+    )
+    server.mark_game_100_percent('g-1', is_100_percent=False)
+    mock_client.return_value.update_game_tracker.assert_called_with(
+        'g-1', is_100_percent=False
+    )
+
+
+@patch('aleonard_mcp.server.client')
 def test_list_my_countries_shapes_output(mock_client):
     mock_client.return_value.list_my_countries.return_value = [
         {

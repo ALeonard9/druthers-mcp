@@ -326,6 +326,81 @@ def set_country_note(country_id: str, note: str) -> str:
     return f'Updated notes for country {country_id}.'
 
 
+@mcp.tool()
+def search_games(query: str) -> list[dict]:
+    """
+    Search for video games by title. Returns candidates with their IGDB id,
+    title, year, platforms, and cover. Use the IGDB id + title with `add_game`.
+    """
+    try:
+        return client().search_games(query)
+    except ApiError as err:
+        if err.status == 503:
+            return [{'error': 'Game search is not configured on the server.'}]
+        raise
+
+
+@mcp.tool()
+def list_my_games() -> list[dict]:
+    """
+    List the games the user is tracking, with list membership (backlog
+    watchlist / played rankings), rank, 100%-completion flag, and notes.
+    """
+    games = client().list_my_games()
+    return [
+        {
+            'game_id': g['game']['id'],
+            'title': g['game']['title'],
+            'on_watchlist': g.get('on_watchlist'),
+            'on_rankings': g.get('on_rankings'),
+            'rank': g.get('rank'),
+            'is_100_percent': g.get('is_100_percent'),
+            'notes': g.get('notes'),
+        }
+        for g in games
+    ]
+
+
+@mcp.tool()
+def game_detail(game_id: str) -> dict:
+    """
+    Get full detail for a game (summary, genres, platforms, release year,
+    rating, time to beat). `game_id` is the id from `list_my_games`.
+    """
+    return client().get_game_detail(game_id)
+
+
+@mcp.tool()
+def add_game(igdb_id: int, title: str, poster_url: Optional[str] = None) -> str:
+    """
+    Add a game to the user's backlog. Provide the IGDB id and title,
+    e.g. from `search_games`.
+    """
+    client().add_game(igdb_id, title, poster_url)
+    return f'Added "{title}" to your game backlog.'
+
+
+@mcp.tool()
+def set_game_note(game_id: str, note: str) -> str:
+    """
+    Set (or replace) your personal note on a tracked game. `game_id` is the
+    id from `list_my_games`.
+    """
+    client().update_game_tracker(game_id, notes=note)
+    return f'Updated notes for game {game_id}.'
+
+
+@mcp.tool()
+def mark_game_100_percent(game_id: str, is_100_percent: bool = True) -> str:
+    """
+    Set (or clear) the 100%-completion flag on a tracked game. `game_id` is
+    the id from `list_my_games`.
+    """
+    client().update_game_tracker(game_id, is_100_percent=is_100_percent)
+    state = '100% completed' if is_100_percent else 'not 100% completed'
+    return f'Marked game {game_id} as {state}.'
+
+
 def main() -> None:
     """Run the MCP server over stdio."""
     logger.info('Starting aleonard.us MCP server (stdio)')
