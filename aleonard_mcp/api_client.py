@@ -22,8 +22,14 @@ class ApiError(Exception):
         self.message = message
 
 
-class ApiClient:
-    """Authenticated client for the aleonard.us API."""
+class ApiClient:  # pylint: disable=too-many-public-methods
+    """
+    Authenticated client for the aleonard.us API.
+
+    A deliberately flat wrapper — one method per endpoint, grouped by domain
+    (movies/tv/books/countries), so it grows past pylint's method ceiling by
+    design.
+    """
 
     def __init__(
         self,
@@ -198,6 +204,69 @@ class ApiClient:
     def unmark_episode(self, episode_id: str) -> None:
         """Remove the watched mark from an episode."""
         return self._request('DELETE', f'/v1/users/me/episodes/{episode_id}')
+
+    # --- books ---
+    def search_books(self, query: str) -> list[dict]:
+        """Search the catalog (Open Library proxy) for books matching ``query``."""
+        return self._request('GET', '/v1/books/search', params={'q': query})
+
+    def list_my_books(self) -> list[dict]:
+        """Return the authenticated user's tracked books."""
+        return self._request('GET', '/v1/users/me/books')
+
+    def get_book_detail(self, book_id: str) -> dict:
+        """Return full detail (description, authors, subjects, ...) for a book."""
+        return self._request('GET', f'/v1/books/{book_id}')
+
+    def _ensure_catalog_book(
+        self, isbn: str, title: str, poster_url: Optional[str]
+    ) -> dict:
+        """Create the catalog book if needed (admin), else find it by isbn."""
+        try:
+            return self._request(
+                'POST',
+                '/v1/books',
+                json={'isbn': isbn, 'title': title, 'poster_url': poster_url},
+            )
+        except ApiError as err:
+            if err.status != 400:
+                raise
+            for book in self._request('GET', '/v1/books'):
+                if book['isbn'] == isbn:
+                    return book
+            raise
+
+    def add_book(self, isbn: str, title: str, poster_url: Optional[str] = None) -> dict:
+        """Add a book (by isbn) to the user's list as a to-read item."""
+        book = self._ensure_catalog_book(isbn, title, poster_url)
+        return self._request(
+            'POST',
+            f'/v1/users/me/books/{book["id"]}',
+            json={'on_watchlist': True},
+        )
+
+    def update_book_tracker(self, book_id: str, **fields) -> dict:
+        """Update the user's tracker for a catalog book id."""
+        return self._request('PUT', f'/v1/users/me/books/{book_id}', json=fields)
+
+    # --- countries ---
+    def list_countries(self) -> list[dict]:
+        """Return the full country catalog (seeded world list)."""
+        return self._request('GET', '/v1/countries')
+
+    def list_my_countries(self) -> list[dict]:
+        """Return the authenticated user's tracked countries."""
+        return self._request('GET', '/v1/users/me/countries')
+
+    def mark_country(self, country_id: str, **fields) -> dict:
+        """Add/merge a country onto the user's lists (bucket list / visited)."""
+        return self._request(
+            'POST', f'/v1/users/me/countries/{country_id}', json=fields
+        )
+
+    def update_country_tracker(self, country_id: str, **fields) -> dict:
+        """Update the user's tracker for a catalog country id."""
+        return self._request('PUT', f'/v1/users/me/countries/{country_id}', json=fields)
 
 
 def _detail(resp: httpx.Response) -> str:

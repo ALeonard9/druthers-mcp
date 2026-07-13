@@ -1,10 +1,10 @@
 """
 aleonard.us MCP server.
 
-Exposes the personal Movies and TV trackers as MCP tools backed by the
-aleonard.us API, so an LLM (e.g. Claude) can search, list, add, and annotate
-movies and TV shows (including episode watch marks) on the user's behalf.
-Runs over stdio.
+Exposes the personal media trackers (Movies, TV, Books, Countries) as MCP
+tools backed by the aleonard.us API, so an LLM (e.g. Claude) can search,
+list, add, and annotate them on the user's behalf — including TV episode
+watch marks and the travel bucket list. Runs over stdio.
 """
 
 import logging
@@ -204,6 +204,126 @@ def mark_episode_watched(episode_id: str, watched: bool = True) -> str:
     else:
         client().unmark_episode(episode_id)
     return f'Marked episode {episode_id} as {"watched" if watched else "unwatched"}.'
+
+
+@mcp.tool()
+def search_books(query: str) -> list[dict]:
+    """
+    Search for books by title/author. Returns candidates with their isbn,
+    title, authors, year, and cover. Use the isbn + title with `add_book`.
+    """
+    return client().search_books(query)
+
+
+@mcp.tool()
+def list_my_books() -> list[dict]:
+    """
+    List the books the user is tracking, with list membership (to-read
+    watchlist / read rankings), rank, and notes.
+    """
+    books = client().list_my_books()
+    return [
+        {
+            'book_id': b['book']['id'],
+            'title': b['book']['title'],
+            'authors': b['book'].get('authors'),
+            'on_watchlist': b.get('on_watchlist'),
+            'on_rankings': b.get('on_rankings'),
+            'rank': b.get('rank'),
+            'notes': b.get('notes'),
+        }
+        for b in books
+    ]
+
+
+@mcp.tool()
+def book_detail(book_id: str) -> dict:
+    """
+    Get full detail for a book (description, authors, subjects, publish
+    year, pages, rating). `book_id` is the id from `list_my_books`.
+    """
+    return client().get_book_detail(book_id)
+
+
+@mcp.tool()
+def add_book(isbn: str, title: str, poster_url: Optional[str] = None) -> str:
+    """
+    Add a book to the user's to-read list. Provide the isbn and title,
+    e.g. from `search_books`.
+    """
+    client().add_book(isbn, title, poster_url)
+    return f'Added "{title}" to your to-read list.'
+
+
+@mcp.tool()
+def set_book_note(book_id: str, note: str) -> str:
+    """
+    Set (or replace) your personal note on a tracked book. `book_id` is the
+    id from `list_my_books`.
+    """
+    client().update_book_tracker(book_id, notes=note)
+    return f'Updated notes for book {book_id}.'
+
+
+@mcp.tool()
+def list_my_countries() -> list[dict]:
+    """
+    List the countries the user tracks: the visited ranking (with rank and
+    first-visited date) and the travel bucket list.
+    """
+    countries = client().list_my_countries()
+    return [
+        {
+            'country_id': c['country']['id'],
+            'title': c['country']['title'],
+            'flag': c['country'].get('flag_emoji'),
+            'visited': c.get('on_rankings'),
+            'on_bucket_list': c.get('on_watchlist'),
+            'rank': c.get('rank'),
+            'first_visited': c.get('first_visited'),
+            'notes': c.get('notes'),
+        }
+        for c in countries
+    ]
+
+
+@mcp.tool()
+def mark_country(
+    country_code: str,
+    visited: bool = False,
+    bucket_list: bool = False,
+    first_visited: Optional[str] = None,
+) -> str:
+    """
+    Add a country to the user's visited ranking and/or travel bucket list by
+    ISO-2 code (e.g. 'jp'). `first_visited` is an ISO date like '2019-04-02'.
+    """
+    code = (country_code or '').strip().lower()
+    match = next(
+        (c for c in client().list_countries() if c['country_code'] == code), None
+    )
+    if match is None:
+        return f'No country with code "{country_code}" in the catalog.'
+    fields: dict = {'on_rankings': visited, 'on_watchlist': bucket_list}
+    if first_visited:
+        fields['first_visited'] = f'{first_visited}T00:00:00'
+    client().mark_country(match['id'], **fields)
+    lists = [
+        name
+        for flag, name in ((visited, 'visited'), (bucket_list, 'bucket list'))
+        if flag
+    ]
+    return f'Marked {match["title"]} as {" + ".join(lists) or "untracked"}.'
+
+
+@mcp.tool()
+def set_country_note(country_id: str, note: str) -> str:
+    """
+    Set (or replace) your personal note on a tracked country. `country_id`
+    is the id from `list_my_countries`.
+    """
+    client().update_country_tracker(country_id, notes=note)
+    return f'Updated notes for country {country_id}.'
 
 
 def main() -> None:
