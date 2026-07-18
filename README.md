@@ -41,6 +41,21 @@ python -m aleonard_mcp.server
 mcp dev aleonard_mcp/server.py
 ```
 
+## Get an API key (recommended auth)
+
+The clean way to point this server at a real environment is a personal
+**API key** instead of your password:
+
+1. Sign in to the site and mint a key (or via curl):
+   ```bash
+   curl -X POST https://api.druthers.io/v1/users/me/api-keys \
+     -H "Authorization: Bearer <your-jwt>" \
+     -H "Content-Type: application/json" -d '{"name": "laptop mcp"}'
+   ```
+2. Copy the `key` from the response (`drk_…`) — **it is shown exactly once**.
+3. Use it as `API_TOKEN` below. Keys don't expire; revoke one any time with
+   `DELETE /v1/users/me/api-keys/{id}` and it stops working immediately.
+
 ## Register with Claude
 
 Claude Desktop / Claude Code — add to your MCP config:
@@ -52,14 +67,19 @@ Claude Desktop / Claude Code — add to your MCP config:
       "command": "python",
       "args": ["-m", "aleonard_mcp.server"],
       "env": {
-        "API_BASE_URL": "http://127.0.0.1:8000",
-        "API_EMAIL": "you@example.com",
-        "API_PASSWORD": "..."
+        "API_BASE_URL": "https://api.druthers.io",
+        "API_TOKEN": "drk_..."
       }
     }
   }
 }
 ```
+
+- **Claude Code (CLI):** `claude mcp add aleonard-us -e API_BASE_URL=https://api.druthers.io -e API_TOKEN=drk_... -- python -m aleonard_mcp.server`
+- **claude.ai / mobile:** custom connectors need a remote MCP endpoint — not
+  this stdio server. Until a remote transport ships, use Desktop/Code.
+- **Local dev:** point `API_BASE_URL` at `http://127.0.0.1:8000` — the
+  email/password pair still works there (`env/dev.env.template`).
 
 Or run the container (`ghcr.io/aleonard9/aleonard.us-mcp`) with the same env.
 
@@ -68,8 +88,8 @@ Or run the container (`ghcr.io/aleonard9/aleonard.us-mcp`) with the same env.
 | Var | Description |
 |-----|-------------|
 | `API_BASE_URL` | Base URL of `aleonard.us-api`. |
-| `API_TOKEN` | Pre-issued bearer token (alternative to email/password). |
-| `API_EMAIL` / `API_PASSWORD` | Credentials exchanged for a token. |
+| `API_TOKEN` | Personal API key (`drk_…`, mint above) or any pre-issued bearer token. Preferred. |
+| `API_EMAIL` / `API_PASSWORD` | Credentials exchanged for a token (local dev fallback). |
 | `LOG_LEVEL`, `LZ`, `ENV` | Logging / landing-zone metadata. |
 
 ## Develop
