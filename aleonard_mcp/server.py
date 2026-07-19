@@ -411,7 +411,6 @@ def main() -> None:
     mcp.run()
 
 
-
 @mcp.tool()
 def set_completed_date(movie_id: str, completed_date: Optional[str] = None) -> str:
     """
@@ -451,6 +450,7 @@ def set_game_completed_date(game_id: str, completed_date: Optional[str] = None) 
     """
     client().update_game_tracker(game_id, completed_at=completed_date)
     return f'Set game {game_id} completed date to {completed_date or "none"}.'
+
 
 if __name__ == '__main__':
     main()
