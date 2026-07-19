@@ -12,6 +12,7 @@ def test_list_my_movies_shapes_output(mock_client):
             'movie': {'id': 'm-1', 'title': 'The Matrix'},
             'completed': 1,
             'notes': 'classic',
+            'completed_at': '2024-05-01',
             'rank': 2,
         }
     ]
@@ -22,6 +23,7 @@ def test_list_my_movies_shapes_output(mock_client):
             'title': 'The Matrix',
             'watched': True,
             'notes': 'classic',
+            'completed_at': '2024-05-01',
             'rank': 2,
         }
     ]
@@ -78,6 +80,7 @@ def test_list_my_tv_shows_shapes_output(mock_client):
             'on_rankings': False,
             'rank': None,
             'notes': 'innie things',
+            'completed_at': '2024-05-01',
         }
     ]
     out = server.list_my_tv_shows()
@@ -90,6 +93,7 @@ def test_list_my_tv_shows_shapes_output(mock_client):
             'on_rankings': False,
             'rank': None,
             'notes': 'innie things',
+            'completed_at': '2024-05-01',
         }
     ]
 
@@ -158,6 +162,7 @@ def test_list_my_books_shapes_output(mock_client):
             'on_rankings': True,
             'rank': 7,
             'notes': 'spice',
+            'completed_at': '2024-05-01',
         }
     ]
     out = server.list_my_books()
@@ -170,6 +175,7 @@ def test_list_my_books_shapes_output(mock_client):
             'on_rankings': True,
             'rank': 7,
             'notes': 'spice',
+            'completed_at': '2024-05-01',
         }
     ]
 
@@ -218,6 +224,7 @@ def test_list_my_games_shapes_output(mock_client):
             'rank': 4,
             'is_100_percent': True,
             'notes': 'korok hell',
+            'completed_at': '2024-05-01',
         }
     ]
     out = server.list_my_games()
@@ -230,6 +237,7 @@ def test_list_my_games_shapes_output(mock_client):
             'rank': 4,
             'is_100_percent': True,
             'notes': 'korok hell',
+            'completed_at': '2024-05-01',
         }
     ]
 
@@ -273,6 +281,7 @@ def test_list_my_countries_shapes_output(mock_client):
             'rank': 3,
             'first_visited': '2019-04-02T00:00:00',
             'notes': None,
+            'completed_at': '2024-05-01',
         }
     ]
     out = server.list_my_countries()

@@ -57,6 +57,7 @@ def list_my_movies() -> list[dict]:
             'title': m['movie']['title'],
             'watched': m.get('completed') == 1,
             'notes': m.get('notes'),
+            'completed_at': m.get('completed_at'),
             'rank': m.get('rank'),
         }
         for m in movies
@@ -128,6 +129,7 @@ def list_my_tv_shows() -> list[dict]:
             'on_rankings': s.get('on_rankings'),
             'rank': s.get('rank'),
             'notes': s.get('notes'),
+            'completed_at': s.get('completed_at'),
         }
         for s in shows
     ]
@@ -231,6 +233,7 @@ def list_my_books() -> list[dict]:
             'on_rankings': b.get('on_rankings'),
             'rank': b.get('rank'),
             'notes': b.get('notes'),
+            'completed_at': b.get('completed_at'),
         }
         for b in books
     ]
@@ -356,6 +359,7 @@ def list_my_games() -> list[dict]:
             'rank': g.get('rank'),
             'is_100_percent': g.get('is_100_percent'),
             'notes': g.get('notes'),
+            'completed_at': g.get('completed_at'),
         }
         for g in games
     ]
@@ -406,6 +410,47 @@ def main() -> None:
     logger.info('Starting aleonard.us MCP server (stdio)')
     mcp.run()
 
+
+
+@mcp.tool()
+def set_completed_date(movie_id: str, completed_date: Optional[str] = None) -> str:
+    """
+    Set the date you finished a tracked movie (YYYY-MM-DD), or omit the date
+    to clear it. Defaults to the day it entered Rankings if never set.
+    `movie_id` is the id from `list_my_movies`.
+    """
+    client().update_tracker(movie_id, completed_at=completed_date)
+    return f'Set movie {movie_id} completed date to {completed_date or "none"}.'
+
+
+@mcp.tool()
+def set_tv_completed_date(show_id: str, completed_date: Optional[str] = None) -> str:
+    """
+    Set the date you finished a tracked TV show (YYYY-MM-DD), or omit the
+    date to clear it. `show_id` is the id from `list_my_tv_shows`.
+    """
+    client().update_tv_tracker(show_id, completed_at=completed_date)
+    return f'Set show {show_id} completed date to {completed_date or "none"}.'
+
+
+@mcp.tool()
+def set_book_completed_date(book_id: str, completed_date: Optional[str] = None) -> str:
+    """
+    Set the date you finished a tracked book (YYYY-MM-DD), or omit the date
+    to clear it. `book_id` is the id from `list_my_books`.
+    """
+    client().update_book_tracker(book_id, completed_at=completed_date)
+    return f'Set book {book_id} completed date to {completed_date or "none"}.'
+
+
+@mcp.tool()
+def set_game_completed_date(game_id: str, completed_date: Optional[str] = None) -> str:
+    """
+    Set the date you finished a tracked game (YYYY-MM-DD), or omit the date
+    to clear it. `game_id` is the id from `list_my_games`.
+    """
+    client().update_game_tracker(game_id, completed_at=completed_date)
+    return f'Set game {game_id} completed date to {completed_date or "none"}.'
 
 if __name__ == '__main__':
     main()
