@@ -103,3 +103,7 @@ push protection. See [`SECURITY.md`](https://github.com/ALeonard9/.github/blob/m
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## License
+
+GNU General Public License v3.0 — see [LICENSE](LICENSE).
