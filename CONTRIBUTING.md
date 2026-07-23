@@ -1,7 +1,7 @@
 # Contributing
 
 Follows the shared aleonard.us SDLC — see
-[`SDLC.md`](https://github.com/ALeonard9/aleonard.us-api/blob/main/SDLC.md) (canonical).
+[`SDLC.md`](https://github.com/ALeonard9/druthers-api/blob/main/SDLC.md) (canonical).
 
 - **Branches**: `main` is protected. Use `feat/…`, `fix/…`, `chore/…`; open a PR;
   merge on green CI (squash).

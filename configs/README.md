@@ -10,7 +10,7 @@ Registered in three tools:
 ## Claude Code
 
 ```bash
-claude mcp add aleonard-us --scope user -- /Users/adam/dev/aleonard.us-mcp/bin/aleonard-mcp
+claude mcp add aleonard-us --scope user -- /Users/adam/dev/druthers-mcp/bin/aleonard-mcp
 ```
 
 ## Antigravity (`~/.gemini/config/mcp_config.json`)

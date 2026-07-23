@@ -1,6 +1,6 @@
 version: '3'
 
-# Matches the aleonard.us-api / -web task interface for a consistent DX.
+# Matches the druthers-api / -web task interface for a consistent DX.
 tasks:
   default:
     desc: 'List all available tasks'
@@ -35,4 +35,4 @@ tasks:
   build:
     desc: 'Build the Docker image'
     cmds:
-      - docker build -t ghcr.io/aleonard9/aleonard.us-mcp:dev .
+      - docker build -t ghcr.io/aleonard9/druthers-mcp:dev .

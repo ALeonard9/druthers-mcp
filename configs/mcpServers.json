@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "aleonard-us": {
-      "command": "/Users/adam/dev/aleonard.us-mcp/bin/aleonard-mcp"
+      "command": "/Users/adam/dev/druthers-mcp/bin/aleonard-mcp"
     }
   }
 }
