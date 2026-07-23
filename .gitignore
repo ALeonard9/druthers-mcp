@@ -11,3 +11,6 @@ venv/
 env/*
 !env/*.env.template
 .env
+
+# pytest-testmon (pre-push changed-tests DB)
+.testmondata
