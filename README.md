@@ -1,9 +1,9 @@
-# aleonard.us-mcp
+# druthers-mcp
 
 An [MCP](https://modelcontextprotocol.io) server that exposes the personal
 [aleonard.us](https://www.aleonard.us) trackers as tools, so an LLM (e.g. Claude)
 can manage them on your behalf. Backed by
-[`aleonard.us-api`](https://github.com/ALeonard9/aleonard.us-api). First slice:
+[`druthers-api`](https://github.com/ALeonard9/druthers-api). First slice:
 **Movies**.
 
 ## Tools
@@ -23,7 +23,7 @@ The launcher `bin/aleonard-mcp` sources `env/local.env` and runs the server over
 stdio. See [`configs/`](configs/) for per-tool snippets. Quick start for Claude Code:
 
 ```bash
-claude mcp add aleonard-us --scope user -- /Users/adam/dev/aleonard.us-mcp/bin/aleonard-mcp
+claude mcp add aleonard-us --scope user -- /Users/adam/dev/druthers-mcp/bin/aleonard-mcp
 ```
 
 ## Run
@@ -81,13 +81,13 @@ Claude Desktop / Claude Code — add to your MCP config:
 - **Local dev:** point `API_BASE_URL` at `http://127.0.0.1:8000` — the
   email/password pair still works there (`env/dev.env.template`).
 
-Or run the container (`ghcr.io/aleonard9/aleonard.us-mcp`) with the same env.
+Or run the container (`ghcr.io/aleonard9/druthers-mcp`) with the same env.
 
 ## Config
 
 | Var | Description |
 |-----|-------------|
-| `API_BASE_URL` | Base URL of `aleonard.us-api`. |
+| `API_BASE_URL` | Base URL of `druthers-api`. |
 | `API_TOKEN` | Personal API key (`drk_…`, mint above) or any pre-issued bearer token. Preferred. |
 | `API_EMAIL` / `API_PASSWORD` | Credentials exchanged for a token (local dev fallback). |
 | `LOG_LEVEL`, `LZ`, `ENV` | Logging / landing-zone metadata. |

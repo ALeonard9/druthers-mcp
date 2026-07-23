@@ -2,7 +2,7 @@
   "mcp": {
     "aleonard-us": {
       "type": "local",
-      "command": ["/Users/adam/dev/aleonard.us-mcp/bin/aleonard-mcp"],
+      "command": ["/Users/adam/dev/druthers-mcp/bin/aleonard-mcp"],
       "enabled": true
     }
   }
