@@ -1,98 +1,85 @@
-# druthers-mcp
+# Druthers MCP
 
-An [MCP](https://modelcontextprotocol.io) server that exposes the personal
-[aleonard.us](https://www.aleonard.us) trackers as tools, so an LLM (e.g. Claude)
-can manage them on your behalf. Backed by
-[`druthers-api`](https://github.com/ALeonard9/druthers-api). First slice:
-**Movies**.
+> **[Druthers](https://druthers.io)** is social taste-sharing for the things you love —
+> **Movies, TV, Books, and Games**.
+
+This is a [Model Context Protocol](https://modelcontextprotocol.io) server that
+exposes your Druthers library as **tools**, so an assistant like Claude can search,
+track, and annotate on your behalf — "add *Dune* to my watchlist", "mark episode 3
+watched", "what games have I 100%'d?". Backed by
+[`druthers-api`](https://github.com/ALeonard9/druthers-api).
 
 ## Tools
 
-| Tool | Description |
-|------|-------------|
-| `search_movies(query)` | Search the catalog (OMDB proxy) by title. |
-| `list_my_movies()` | List your tracked movies with watched status + notes. |
-| `movie_detail(movie_id)` | Full detail: plot, director, cast, genre, year, rating. |
-| `add_movie(imdb_id, title, poster_url?)` | Add a movie to your watchlist. |
-| `mark_watched(movie_id, watched=True)` | Toggle a movie's watched flag. |
-| `set_note(movie_id, note)` | Set your personal note on a movie. |
+The server exposes a consistent set of tools across every domain — **movies, tv,
+books, games**:
 
-## Register it (Claude, Antigravity, OpenCode)
+| Verb | Example | What it does |
+|---|---|---|
+| `search_*` | `search_movies("dune")` | Find titles in the external catalog |
+| `add_*` | `add_book(...)` | Add an item to your library |
+| `list_my_*` | `list_my_games()` | List your tracked items with status + notes |
+| `*_detail` | `tv_show_detail(id)` | Full metadata for one item |
+| `mark_*` | `mark_watched` · `mark_episode_watched` · `mark_game_100_percent` | Update status |
+| `set_*` | `set_note` · `set_completed_date` | Personal notes and completion dates |
 
-The launcher `bin/aleonard-mcp` sources `env/local.env` and runs the server over
-stdio. See [`configs/`](configs/) for per-tool snippets. Quick start for Claude Code:
+## Add it to Claude
+
+Register the stdio server — it shows up in your client as **`druthers`**
+(`mcp__druthers__*` tools):
 
 ```bash
-claude mcp add aleonard-us --scope user -- /Users/adam/dev/druthers-mcp/bin/aleonard-mcp
+# Claude Code (local checkout)
+claude mcp add druthers --scope user -- /path/to/druthers-mcp/bin/aleonard-mcp
+
+# Claude Desktop / Code (containerized, pointed at prod)
+claude mcp add druthers \
+  -e API_BASE_URL=https://api.druthers.io \
+  -e API_TOKEN=drk_... \
+  -- python -m aleonard_mcp.server
 ```
 
-## Run
+Or run the published image `ghcr.io/aleonard9/druthers-mcp` with the same env.
+
+## Authentication — use an API key
+
+Point the server at a real environment with a personal **API key** (not your password):
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
+curl -X POST https://api.druthers.io/v1/users/me/api-keys \
+  -H "Authorization: Bearer <your-jwt>" -H "Content-Type: application/json" \
+  -d '{"name": "laptop mcp"}'
+```
+
+Copy the `drk_…` key from the response (**shown once**) into `API_TOKEN`. Keys
+don't expire; revoke any time with `DELETE /v1/users/me/api-keys/{id}`.
+
+## Run locally
+
+```bash
+python3.13 -m venv .venv && source .venv/bin/activate
 pip install -r requirements/dev.txt
-cp env/dev.env.template env/dev.env      # set API_BASE_URL + creds
-
-# stdio server:
+cp env/dev.env.template env/dev.env          # set API_BASE_URL + API_TOKEN
 set -a && . env/dev.env && set +a
-python -m aleonard_mcp.server
-
-# or explore with the MCP Inspector:
-mcp dev aleonard_mcp/server.py
+python -m aleonard_mcp.server                # stdio server
+# or explore: mcp dev aleonard_mcp/server.py
 ```
 
-## Get an API key (recommended auth)
+Against a local `druthers-api` (`API_BASE_URL=http://127.0.0.1:8000`), an
+email/password pair also works.
 
-The clean way to point this server at a real environment is a personal
-**API key** instead of your password:
-
-1. Sign in to the site and mint a key (or via curl):
-   ```bash
-   curl -X POST https://api.druthers.io/v1/users/me/api-keys \
-     -H "Authorization: Bearer <your-jwt>" \
-     -H "Content-Type: application/json" -d '{"name": "laptop mcp"}'
-   ```
-2. Copy the `key` from the response (`drk_…`) — **it is shown exactly once**.
-3. Use it as `API_TOKEN` below. Keys don't expire; revoke one any time with
-   `DELETE /v1/users/me/api-keys/{id}` and it stops working immediately.
-
-## Register with Claude
-
-Claude Desktop / Claude Code — add to your MCP config:
-
-```json
-{
-  "mcpServers": {
-    "aleonard-us": {
-      "command": "python",
-      "args": ["-m", "aleonard_mcp.server"],
-      "env": {
-        "API_BASE_URL": "https://api.druthers.io",
-        "API_TOKEN": "drk_..."
-      }
-    }
-  }
-}
-```
-
-- **Claude Code (CLI):** `claude mcp add aleonard-us -e API_BASE_URL=https://api.druthers.io -e API_TOKEN=drk_... -- python -m aleonard_mcp.server`
-- **claude.ai / mobile:** custom connectors need a remote MCP endpoint — not
-  this stdio server. Until a remote transport ships, use Desktop/Code.
-- **Local dev:** point `API_BASE_URL` at `http://127.0.0.1:8000` — the
-  email/password pair still works there (`env/dev.env.template`).
-
-Or run the container (`ghcr.io/aleonard9/druthers-mcp`) with the same env.
-
-## Config
-
-| Var | Description |
-|-----|-------------|
-| `API_BASE_URL` | Base URL of `druthers-api`. |
-| `API_TOKEN` | Personal API key (`drk_…`, mint above) or any pre-issued bearer token. Preferred. |
-| `API_EMAIL` / `API_PASSWORD` | Credentials exchanged for a token (local dev fallback). |
-| `LOG_LEVEL`, `LZ`, `ENV` | Logging / landing-zone metadata. |
+| Env var | Description |
+|---|---|
+| `API_BASE_URL` | Base URL of `druthers-api` |
+| `API_TOKEN` | Personal API key (`drk_…`) — preferred |
+| `API_EMAIL` / `API_PASSWORD` | Local-dev fallback credentials |
 
 ## Develop
 
-`task test` (pytest), `task lint` (pylint), `task format` (black). CI runs
-lint + black + pytest; `publish_docker.yaml` pushes to GHCR on release.
+`task test` (pytest) · `task lint` (pylint) · `task format` (black). Pre-commit runs
+Gitleaks + lint on commit; tests run at pre-push (changed-only). CI runs the full
+suite, and Gitleaks/Semgrep/Trivy scan every PR.
+
+## License
+
+GNU General Public License v3.0 — see [LICENSE](LICENSE).
