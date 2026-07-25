@@ -85,7 +85,7 @@ class ApiClient:  # pylint: disable=too-many-public-methods
 
     # --- movies ---
     def search_movies(self, query: str) -> list[dict]:
-        """Search the catalog (OMDB proxy) for movies matching ``query``."""
+        """Search the catalog (TMDB proxy) for movies matching ``query``."""
         return self._request('GET', '/v1/movies/search', params={'q': query})
 
     def list_my_movies(self) -> list[dict]:
@@ -97,28 +97,28 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         return self._request('GET', f'/v1/movies/{movie_id}')
 
     def _ensure_catalog_movie(
-        self, imdb: str, title: str, poster_url: Optional[str]
+        self, tmdb: int, title: str, poster_url: Optional[str]
     ) -> dict:
-        """Create the catalog movie if needed (admin), else find it by imdb."""
+        """Create the catalog movie if needed (admin), else find it by tmdb id."""
         try:
             return self._request(
                 'POST',
                 '/v1/movies',
-                json={'imdb': imdb, 'title': title, 'poster_url': poster_url},
+                json={'tmdb': tmdb, 'title': title, 'poster_url': poster_url},
             )
         except ApiError as err:
             if err.status != 400:
                 raise
             for movie in self._request('GET', '/v1/movies'):
-                if movie['imdb'] == imdb:
+                if movie.get('tmdb') == tmdb:
                     return movie
             raise
 
     def add_movie(
-        self, imdb: str, title: str, poster_url: Optional[str] = None
+        self, tmdb: int, title: str, poster_url: Optional[str] = None
     ) -> dict:
-        """Add a movie (by imdb id) to the user's list as a watchlist item."""
-        movie = self._ensure_catalog_movie(imdb, title, poster_url)
+        """Add a movie (by TMDB id) to the user's list as a watchlist item."""
+        movie = self._ensure_catalog_movie(tmdb, title, poster_url)
         return self._request(
             'POST',
             f'/v1/users/me/movies/{movie["id"]}',
