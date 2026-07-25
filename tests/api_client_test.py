@@ -20,11 +20,11 @@ def test_search_movies_passes_query():
         assert request.url.path == '/v1/movies/search'
         assert request.url.params['q'] == 'matrix'
         assert request.headers['Authorization'] == 'Bearer seed-token'
-        return httpx.Response(200, json=[{'imdb': 'tt1', 'title': 'The Matrix'}])
+        return httpx.Response(200, json=[{'tmdb': 603, 'title': 'The Matrix'}])
 
     client = make_client(handler)
     results = client.search_movies('matrix')
-    assert results[0]['imdb'] == 'tt1'
+    assert results[0]['tmdb'] == 603
 
 
 def test_add_movie_creates_catalog_then_marks():
@@ -33,13 +33,13 @@ def test_add_movie_creates_catalog_then_marks():
     def handler(request: httpx.Request) -> httpx.Response:
         calls.append((request.method, request.url.path))
         if request.method == 'POST' and request.url.path == '/v1/movies':
-            return httpx.Response(201, json={'id': 'm-1', 'imdb': 'tt1'})
+            return httpx.Response(201, json={'id': 'm-1', 'tmdb': 603})
         if request.url.path == '/v1/users/me/movies/m-1':
             return httpx.Response(201, json={'id': 't-1', 'completed': 0})
         return httpx.Response(404, json={'detail': 'nope'})
 
     client = make_client(handler)
-    tracker = client.add_movie('tt1', 'The Matrix')
+    tracker = client.add_movie(603, 'The Matrix')
     assert tracker['id'] == 't-1'
     assert ('POST', '/v1/movies') in calls
     assert ('POST', '/v1/users/me/movies/m-1') in calls
@@ -48,15 +48,15 @@ def test_add_movie_creates_catalog_then_marks():
 def test_add_movie_reuses_existing_catalog_on_400():
     def handler(request: httpx.Request) -> httpx.Response:
         if request.method == 'POST' and request.url.path == '/v1/movies':
-            return httpx.Response(400, json={'detail': 'Movie imdb already exists'})
+            return httpx.Response(400, json={'detail': 'Movie already exists'})
         if request.method == 'GET' and request.url.path == '/v1/movies':
-            return httpx.Response(200, json=[{'id': 'm-9', 'imdb': 'tt1'}])
+            return httpx.Response(200, json=[{'id': 'm-9', 'tmdb': 603}])
         if request.url.path == '/v1/users/me/movies/m-9':
             return httpx.Response(201, json={'id': 't-9', 'completed': 0})
         return httpx.Response(404, json={'detail': 'nope'})
 
     client = make_client(handler)
-    tracker = client.add_movie('tt1', 'The Matrix')
+    tracker = client.add_movie(603, 'The Matrix')
     assert tracker['id'] == 't-9'
 
 

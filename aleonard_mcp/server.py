@@ -34,8 +34,8 @@ def client() -> ApiClient:
 @mcp.tool()
 def search_movies(query: str) -> list[dict]:
     """
-    Search for movies by title. Returns catalog candidates with their imdb id,
-    title, year and poster. Use the imdb id + title with `add_movie`.
+    Search for movies by title. Returns catalog candidates with their tmdb id,
+    title, year and poster. Use the tmdb id + title with `add_movie`.
     """
     try:
         return client().search_movies(query)
@@ -74,12 +74,12 @@ def movie_detail(movie_id: str) -> dict:
 
 
 @mcp.tool()
-def add_movie(imdb_id: str, title: str, poster_url: Optional[str] = None) -> str:
+def add_movie(tmdb_id: int, title: str, poster_url: Optional[str] = None) -> str:
     """
-    Add a movie to the user's list (as a watchlist item). Provide the imdb id
+    Add a movie to the user's list (as a watchlist item). Provide the tmdb id
     and title, e.g. from `search_movies`.
     """
-    client().add_movie(imdb_id, title, poster_url)
+    client().add_movie(tmdb_id, title, poster_url)
     return f'Added "{title}" to your watchlist.'
 
 

@@ -32,11 +32,9 @@ def test_list_my_movies_shapes_output(mock_client):
 @patch('aleonard_mcp.server.client')
 def test_add_movie_returns_confirmation(mock_client):
     mock_client.return_value.add_movie.return_value = {'id': 't-1'}
-    msg = server.add_movie('tt1', 'The Matrix')
+    msg = server.add_movie(603, 'The Matrix')
     assert 'The Matrix' in msg
-    mock_client.return_value.add_movie.assert_called_once_with(
-        'tt1', 'The Matrix', None
-    )
+    mock_client.return_value.add_movie.assert_called_once_with(603, 'The Matrix', None)
 
 
 @patch('aleonard_mcp.server.client')
