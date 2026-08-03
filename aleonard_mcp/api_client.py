@@ -27,7 +27,7 @@ class ApiClient:  # pylint: disable=too-many-public-methods
     Authenticated client for the aleonard.us API.
 
     A deliberately flat wrapper — one method per endpoint, grouped by domain
-    (movies/tv/books/countries/games), so it grows past pylint's method
+    (movies/tv/books/games), so it grows past pylint's method
     ceiling by design.
     """
 
@@ -248,25 +248,6 @@ class ApiClient:  # pylint: disable=too-many-public-methods
     def update_book_tracker(self, book_id: str, **fields) -> dict:
         """Update the user's tracker for a catalog book id."""
         return self._request('PUT', f'/v1/users/me/books/{book_id}', json=fields)
-
-    # --- countries ---
-    def list_countries(self) -> list[dict]:
-        """Return the full country catalog (seeded world list)."""
-        return self._request('GET', '/v1/countries')
-
-    def list_my_countries(self) -> list[dict]:
-        """Return the authenticated user's tracked countries."""
-        return self._request('GET', '/v1/users/me/countries')
-
-    def mark_country(self, country_id: str, **fields) -> dict:
-        """Add/merge a country onto the user's lists (bucket list / visited)."""
-        return self._request(
-            'POST', f'/v1/users/me/countries/{country_id}', json=fields
-        )
-
-    def update_country_tracker(self, country_id: str, **fields) -> dict:
-        """Update the user's tracker for a catalog country id."""
-        return self._request('PUT', f'/v1/users/me/countries/{country_id}', json=fields)
 
     # --- games ---
     def search_games(self, query: str) -> list[dict]:

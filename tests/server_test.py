@@ -189,30 +189,6 @@ def test_add_book_returns_confirmation(mock_client):
 
 
 @patch('aleonard_mcp.server.client')
-def test_mark_country_by_code(mock_client):
-    mock_client.return_value.list_countries.return_value = [
-        {'id': 'c-1', 'title': 'Japan', 'country_code': 'jp'},
-        {'id': 'c-2', 'title': 'Iceland', 'country_code': 'is'},
-    ]
-    msg = server.mark_country('JP', visited=True, first_visited='2019-04-02')
-    assert 'Japan' in msg and 'visited' in msg
-    mock_client.return_value.mark_country.assert_called_once_with(
-        'c-1',
-        on_rankings=True,
-        on_watchlist=False,
-        first_visited='2019-04-02T00:00:00',
-    )
-
-
-@patch('aleonard_mcp.server.client')
-def test_mark_country_unknown_code(mock_client):
-    mock_client.return_value.list_countries.return_value = []
-    msg = server.mark_country('zz', bucket_list=True)
-    assert 'No country' in msg
-    mock_client.return_value.mark_country.assert_not_called()
-
-
-@patch('aleonard_mcp.server.client')
 def test_list_my_games_shapes_output(mock_client):
     mock_client.return_value.list_my_games.return_value = [
         {
@@ -267,24 +243,3 @@ def test_mark_game_100_percent(mock_client):
     mock_client.return_value.update_game_tracker.assert_called_with(
         'g-1', is_100_percent=False
     )
-
-
-@patch('aleonard_mcp.server.client')
-def test_list_my_countries_shapes_output(mock_client):
-    mock_client.return_value.list_my_countries.return_value = [
-        {
-            'country': {'id': 'c-1', 'title': 'Japan', 'flag_emoji': '🇯🇵'},
-            'on_rankings': True,
-            'on_watchlist': False,
-            'rank': 3,
-            'first_visited': '2019-04-02T00:00:00',
-            'notes': None,
-            'completed_at': '2024-05-01',
-        }
-    ]
-    out = server.list_my_countries()
-    assert out[0]['title'] == 'Japan'
-    assert out[0]['visited'] is True
-    assert out[0]['on_bucket_list'] is False
-    assert out[0]['flag'] == '🇯🇵'
-    assert out[0]['rank'] == 3
