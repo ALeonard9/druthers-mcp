@@ -21,14 +21,12 @@ repos:
       - id: debug-statements
       - id: check-added-large-files
         args: [--maxkb=200]
-      - id: double-quote-string-fixer
       - id: mixed-line-ending
       - id: no-commit-to-branch
   - repo: https://github.com/psf/black-pre-commit-mirror
     rev: 26.5.1
     hooks:
       - id: black
-        args: [--skip-string-normalization]
   - repo: local
     hooks:
       - id: pylint

@@ -10,15 +10,25 @@ watch marks. Runs over stdio.
 import logging
 from typing import Optional
 
-from mcp.server.fastmcp import FastMCP  # pylint: disable=import-error
+try:
+    from mcp.server.fastmcp import (
+        FastMCP,
+    )  # pylint: disable=import-error,no-name-in-module
+except ImportError:
+    try:
+        from mcp.server import FastMCP  # pylint: disable=import-error,no-name-in-module
+    except ImportError:
+        from mcp.server import (
+            MCPServer as FastMCP,
+        )  # pylint: disable=import-error,no-name-in-module
 
 from aleonard_mcp.api_client import ApiClient, ApiError
 from aleonard_mcp.config import get_settings
 
 logging.basicConfig(level=get_settings().log_level.upper())
-logger = logging.getLogger('aleonard_mcp')
+logger = logging.getLogger("aleonard_mcp")
 
-mcp = FastMCP('aleonard-us')
+mcp = FastMCP("aleonard-us")
 
 _client: Optional[ApiClient] = None
 
@@ -41,7 +51,7 @@ def search_movies(query: str) -> list[dict]:
         return client().search_movies(query)
     except ApiError as err:
         if err.status == 503:
-            return [{'error': 'Movie search is not configured on the server.'}]
+            return [{"error": "Movie search is not configured on the server."}]
         raise
 
 
@@ -53,12 +63,12 @@ def list_my_movies() -> list[dict]:
     movies = client().list_my_movies()
     return [
         {
-            'movie_id': m['movie']['id'],
-            'title': m['movie']['title'],
-            'watched': m.get('completed') == 1,
-            'notes': m.get('notes'),
-            'completed_at': m.get('completed_at'),
-            'rank': m.get('rank'),
+            "movie_id": m["movie"]["id"],
+            "title": m["movie"]["title"],
+            "watched": m.get("completed") == 1,
+            "notes": m.get("notes"),
+            "completed_at": m.get("completed_at"),
+            "rank": m.get("rank"),
         }
         for m in movies
     ]
@@ -100,7 +110,7 @@ def set_note(movie_id: str, note: str) -> str:
     from `list_my_movies`.
     """
     client().update_tracker(movie_id, notes=note)
-    return f'Updated notes for movie {movie_id}.'
+    return f"Updated notes for movie {movie_id}."
 
 
 @mcp.tool()
@@ -122,14 +132,14 @@ def list_my_tv_shows() -> list[dict]:
     shows = client().list_my_tv_shows()
     return [
         {
-            'show_id': s['tv_show']['id'],
-            'title': s['tv_show']['title'],
-            'status': s['tv_show'].get('status'),
-            'on_watchlist': s.get('on_watchlist'),
-            'on_rankings': s.get('on_rankings'),
-            'rank': s.get('rank'),
-            'notes': s.get('notes'),
-            'completed_at': s.get('completed_at'),
+            "show_id": s["tv_show"]["id"],
+            "title": s["tv_show"]["title"],
+            "status": s["tv_show"].get("status"),
+            "on_watchlist": s.get("on_watchlist"),
+            "on_rankings": s.get("on_rankings"),
+            "rank": s.get("rank"),
+            "notes": s.get("notes"),
+            "completed_at": s.get("completed_at"),
         }
         for s in shows
     ]
@@ -166,7 +176,7 @@ def set_tv_note(show_id: str, note: str) -> str:
     id from `list_my_tv_shows`.
     """
     client().update_tv_tracker(show_id, notes=note)
-    return f'Updated notes for TV show {show_id}.'
+    return f"Updated notes for TV show {show_id}."
 
 
 @mcp.tool()
@@ -177,21 +187,21 @@ def show_episodes(show_id: str, season: Optional[int] = None) -> list[dict]:
     """
     episodes = client().list_show_episodes(show_id)
     watched_ids = {
-        m['episode']['id']
+        m["episode"]["id"]
         for m in client().list_my_episode_marks(show_id)
-        if m.get('watched')
+        if m.get("watched")
     }
     return [
         {
-            'episode_id': e['id'],
-            'season': e.get('season'),
-            'episode': e.get('season_number'),
-            'title': e['title'],
-            'airdate': e.get('airdate'),
-            'watched': e['id'] in watched_ids,
+            "episode_id": e["id"],
+            "season": e.get("season"),
+            "episode": e.get("season_number"),
+            "title": e["title"],
+            "airdate": e.get("airdate"),
+            "watched": e["id"] in watched_ids,
         }
         for e in episodes
-        if season is None or e.get('season') == season
+        if season is None or e.get("season") == season
     ]
 
 
@@ -226,14 +236,14 @@ def list_my_books() -> list[dict]:
     books = client().list_my_books()
     return [
         {
-            'book_id': b['book']['id'],
-            'title': b['book']['title'],
-            'authors': b['book'].get('authors'),
-            'on_watchlist': b.get('on_watchlist'),
-            'on_rankings': b.get('on_rankings'),
-            'rank': b.get('rank'),
-            'notes': b.get('notes'),
-            'completed_at': b.get('completed_at'),
+            "book_id": b["book"]["id"],
+            "title": b["book"]["title"],
+            "authors": b["book"].get("authors"),
+            "on_watchlist": b.get("on_watchlist"),
+            "on_rankings": b.get("on_rankings"),
+            "rank": b.get("rank"),
+            "notes": b.get("notes"),
+            "completed_at": b.get("completed_at"),
         }
         for b in books
     ]
@@ -265,7 +275,7 @@ def set_book_note(book_id: str, note: str) -> str:
     id from `list_my_books`.
     """
     client().update_book_tracker(book_id, notes=note)
-    return f'Updated notes for book {book_id}.'
+    return f"Updated notes for book {book_id}."
 
 
 @mcp.tool()
@@ -278,7 +288,7 @@ def search_games(query: str) -> list[dict]:
         return client().search_games(query)
     except ApiError as err:
         if err.status == 503:
-            return [{'error': 'Game search is not configured on the server.'}]
+            return [{"error": "Game search is not configured on the server."}]
         raise
 
 
@@ -291,14 +301,14 @@ def list_my_games() -> list[dict]:
     games = client().list_my_games()
     return [
         {
-            'game_id': g['game']['id'],
-            'title': g['game']['title'],
-            'on_watchlist': g.get('on_watchlist'),
-            'on_rankings': g.get('on_rankings'),
-            'rank': g.get('rank'),
-            'is_100_percent': g.get('is_100_percent'),
-            'notes': g.get('notes'),
-            'completed_at': g.get('completed_at'),
+            "game_id": g["game"]["id"],
+            "title": g["game"]["title"],
+            "on_watchlist": g.get("on_watchlist"),
+            "on_rankings": g.get("on_rankings"),
+            "rank": g.get("rank"),
+            "is_100_percent": g.get("is_100_percent"),
+            "notes": g.get("notes"),
+            "completed_at": g.get("completed_at"),
         }
         for g in games
     ]
@@ -330,7 +340,7 @@ def set_game_note(game_id: str, note: str) -> str:
     id from `list_my_games`.
     """
     client().update_game_tracker(game_id, notes=note)
-    return f'Updated notes for game {game_id}.'
+    return f"Updated notes for game {game_id}."
 
 
 @mcp.tool()
@@ -340,13 +350,13 @@ def mark_game_100_percent(game_id: str, is_100_percent: bool = True) -> str:
     the id from `list_my_games`.
     """
     client().update_game_tracker(game_id, is_100_percent=is_100_percent)
-    state = '100% completed' if is_100_percent else 'not 100% completed'
-    return f'Marked game {game_id} as {state}.'
+    state = "100% completed" if is_100_percent else "not 100% completed"
+    return f"Marked game {game_id} as {state}."
 
 
 def main() -> None:
     """Run the MCP server over stdio."""
-    logger.info('Starting aleonard.us MCP server (stdio)')
+    logger.info("Starting aleonard.us MCP server (stdio)")
     mcp.run()
 
 
@@ -391,5 +401,5 @@ def set_game_completed_date(game_id: str, completed_date: Optional[str] = None) 
     return f'Set game {game_id} completed date to {completed_date or "none"}.'
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
