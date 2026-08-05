@@ -10,7 +10,12 @@ watch marks. Runs over stdio.
 import logging
 from typing import Optional
 
-from mcp.server.fastmcp import FastMCP  # pylint: disable=import-error,no-name-in-module
+try:
+    from mcp.server.fastmcp import (
+        FastMCP,
+    )  # pylint: disable=import-error,no-name-in-module
+except ImportError:
+    from mcp.server import FastMCP  # pylint: disable=import-error,no-name-in-module
 
 from aleonard_mcp.api_client import ApiClient, ApiError
 from aleonard_mcp.config import get_settings
