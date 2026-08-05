@@ -15,7 +15,12 @@ try:
         FastMCP,
     )  # pylint: disable=import-error,no-name-in-module
 except ImportError:
-    from mcp.server import FastMCP  # pylint: disable=import-error,no-name-in-module
+    try:
+        from mcp.server import FastMCP  # pylint: disable=import-error,no-name-in-module
+    except ImportError:
+        from mcp.server import (
+            MCPServer as FastMCP,
+        )  # pylint: disable=import-error,no-name-in-module
 
 from aleonard_mcp.api_client import ApiClient, ApiError
 from aleonard_mcp.config import get_settings
