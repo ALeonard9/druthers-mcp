@@ -1,2 +1,7 @@
 mcp[cli]==1.28.1
 httpx==0.28.1
+
+# Transitive pins to clear known vulns (Trivy):
+# msgpack GHSA-6v7p-g79w-8964, setuptools CVE-2025-47273.
+msgpack>=1.2.1
+setuptools>=78.1.1
