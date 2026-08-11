@@ -294,6 +294,11 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         """Update the user's tracker for a catalog game id."""
         return self._request("PUT", f"/v1/users/me/games/{game_id}", json=fields)
 
+    # --- comparison ---
+    def compare_with_user(self, handle: str) -> dict:
+        """Get comparison data for all domains against another user."""
+        return self._request("GET", f"/v1/users/me/comparison/{handle}")
+
 
 def _detail(resp: httpx.Response) -> str:
     try:

@@ -337,3 +337,101 @@ def test_set_game_note(mock_client):
     mock_client.return_value.update_game_tracker.assert_called_once_with(
         "g-1", notes="played on switch"
     )
+
+
+# Tests for compare_users
+@patch("druthers_mcp.server.client")
+def test_compare_users_full_visibility(mock_client):
+    mock_client.return_value.compare_with_user.return_value = {
+        "handle": "bob",
+        "display_name": "Bob",
+        "relationship": "friend",
+        "domains": [
+            {
+                "category": "movies",
+                "rankings_visible": True,
+                "watchlist_visible": True,
+                "alignment_status": "ready",
+                "alignment_score": 85,
+                "shared_ranked_count": 10,
+                "most_aligned": [
+                    {"title": "Inception", "your_rank": 1, "their_rank": 2, "gap": 1}
+                ],
+                "biggest_gaps": [
+                    {"title": "Matrix", "your_rank": 1, "their_rank": 10, "gap": 9}
+                ],
+                "common_watchlist": [{"title": "Dune"}],
+            }
+        ],
+    }
+
+    out = server.compare_users("bob")
+    assert out["target_user"] == "Bob (@bob)"
+
+    movies = out["domains"]["movies"]
+    assert "85%" in movies["alignment"]
+    assert len(movies["closest_agreements"]) == 1
+    assert "Inception" in movies["closest_agreements"][0]
+    assert len(movies["biggest_gaps"]) == 1
+    assert "Matrix" in movies["biggest_gaps"][0]
+    assert movies["common_watchlist"] == ["Dune"]
+
+
+@patch("druthers_mcp.server.client")
+def test_compare_users_visibility_limits(mock_client):
+    mock_client.return_value.compare_with_user.return_value = {
+        "handle": "secret_bob",
+        "display_name": "Bob",
+        "relationship": "stranger",
+        "domains": [
+            {
+                "category": "movies",
+                "rankings_visible": False,
+                "watchlist_visible": False,
+            },
+            {
+                "category": "tv-shows",
+                "rankings_visible": True,
+                "watchlist_visible": False,
+                "alignment_status": "not_enough_overlap",
+                "shared_ranked_count": 2,
+                "most_aligned": [],
+                "biggest_gaps": [],
+                "common_watchlist": [],
+            },
+        ],
+    }
+
+    out = server.compare_users("secret_bob")
+
+    movies = out["domains"]["movies"]
+    assert "Visibility limit: Rankings are private" in movies
+
+    tv = out["domains"]["tv-shows"]
+    assert "Not enough overlap" in tv["alignment"]
+    assert "watchlist is private" in tv["common_watchlist"]
+
+
+@patch("druthers_mcp.server.client")
+def test_compare_users_domain_filter(mock_client):
+    mock_client.return_value.compare_with_user.return_value = {
+        "handle": "bob",
+        "display_name": "Bob",
+        "relationship": "friend",
+        "domains": [
+            {"category": "movies", "rankings_visible": False},
+            {"category": "books", "rankings_visible": False},
+        ],
+    }
+
+    out = server.compare_users("bob", domain="books")
+    assert "movies" not in out["domains"]
+    assert "books" in out["domains"]
+
+
+@patch("druthers_mcp.server.client")
+def test_compare_users_not_found(mock_client):
+    mock_client.return_value.compare_with_user.side_effect = ApiError(404, "Not found")
+    out = server.compare_users("nobody")
+    assert "error" in out
+    assert "nobody" in out["error"]

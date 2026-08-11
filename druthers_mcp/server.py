@@ -364,6 +364,81 @@ def mark_game_100_percent(game_id: str, is_100_percent: bool = True) -> str:
     return f"Marked game {game_id} as {state}."
 
 
+def _format_comparison_domain(d: dict) -> dict | str:
+    if not d.get("rankings_visible"):
+        return "Visibility limit: Rankings are private. Cannot compare lists."
+
+    summary = {}
+    status = d.get("alignment_status")
+    if status == "ready":
+        summary["alignment"] = (
+            f"Score: {d.get('alignment_score')}%. "
+            f"Based on {d.get('shared_ranked_count')} shared ranked items."
+        )
+    elif status == "not_enough_overlap":
+        summary["alignment"] = (
+            "Not enough overlap to calculate score "
+            f"(only {d.get('shared_ranked_count')} shared ranked items)."
+        )
+    else:
+        summary["alignment"] = "Rankings are hidden."
+
+    if d.get("most_aligned"):
+        summary["closest_agreements"] = [
+            f"{i['title']} (You: {i['your_rank']}, Them: {i['their_rank']}, Gap: {i['gap']})"
+            for i in d.get("most_aligned")
+        ]
+    if d.get("biggest_gaps"):
+        summary["biggest_gaps"] = [
+            f"{i['title']} (You: {i['your_rank']}, Them: {i['their_rank']}, Gap: {i['gap']})"
+            for i in d.get("biggest_gaps")
+        ]
+
+    if d.get("watchlist_visible"):
+        common = d.get("common_watchlist", [])
+        if common:
+            summary["common_watchlist"] = [i["title"] for i in common]
+        else:
+            summary["common_watchlist"] = "No common items on watchlist."
+    else:
+        summary["common_watchlist"] = "Visibility limit: Their watchlist is private."
+
+    return summary
+
+
+@mcp.tool()
+def compare_users(handle: str, domain: Optional[str] = None) -> dict:
+    """
+    Compare your lists against another user by handle.
+    Optionally restrict to one domain ('movies', 'tv-shows', 'books', 'games').
+    Returns common watchlist items, biggest ranking gaps, and closest agreements.
+    Only data you are permitted to see based on the other user's visibility settings is returned.
+    """
+    try:
+        data = client().compare_with_user(handle)
+    except ApiError as err:
+        if err.status == 404:
+            return {"error": f"User @{handle} not found or not visible to you."}
+        raise
+
+    domains = data.get("domains", [])
+    if domain:
+        domains = [d for d in domains if d.get("category") == domain]
+        if not domains:
+            return {"error": f"Domain '{domain}' not found or invalid."}
+
+    result = {
+        "target_user": f"{data.get('display_name')} (@{data.get('handle')})",
+        "relationship": data.get("relationship"),
+        "domains": {},
+    }
+
+    for d in domains:
+        result["domains"][d.get("category")] = _format_comparison_domain(d)
+
+    return result
+
+
 def main() -> None:
     """Run the MCP server over stdio."""
     logger.info("Starting Druthers MCP server (stdio)")
