@@ -25,8 +25,18 @@ except ImportError:
 from aleonard_mcp.api_client import ApiClient, ApiError
 from aleonard_mcp.config import get_settings
 
-logging.basicConfig(level=get_settings().log_level.upper())
+settings = get_settings()
+logging.basicConfig(level=settings.log_level.upper())
 logger = logging.getLogger("aleonard_mcp")
+
+if settings.env != "prod":
+    logger.warning(
+        "Running in %s environment against %s", settings.env, settings.api_base_url
+    )
+else:
+    logger.info(
+        "Running in %s environment against %s", settings.env, settings.api_base_url
+    )
 
 mcp = FastMCP("aleonard-us")
 

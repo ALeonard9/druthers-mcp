@@ -53,7 +53,8 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         s = self._settings
         if not (s.api_email and s.api_password):
             raise ApiError(
-                401, "No API_TOKEN and no API_EMAIL/API_PASSWORD to log in with"
+                401,
+                f"No API_TOKEN and no API_EMAIL/API_PASSWORD to log in with (env: {s.env})",
             )
         resp = self._client.post(
             "/v1/auth/token",
