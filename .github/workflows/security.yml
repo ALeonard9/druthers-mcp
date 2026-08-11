@@ -5,7 +5,7 @@ on:
   schedule:     [{ cron: "0 6 * * 1" }]
 jobs:
   scan:
-    uses: ALeonard9/.github/.github/workflows/security-reusable.yml@debug/trivy-image-inspect
+    uses: ALeonard9/.github/.github/workflows/security-reusable.yml@main
     with:
       stack: python
       builds_image: true
