@@ -1,0 +1,12 @@
+#!/bin/sh
+# Launcher for the Druthers MCP server (stdio). Sources local env + venv.
+cd "$(dirname "$0")/.." || exit 1
+# Environment is chosen by the server registration, not at runtime -- see #33.
+ENV_NAME="${MCP_ENV:-prod}"
+if [ -f "env/${ENV_NAME}.env" ]; then
+  set -a; . "./env/${ENV_NAME}.env"; set +a
+else
+  echo "druthers-mcp: env/${ENV_NAME}.env not found" >&2
+  exit 1
+fi
+exec .venv/bin/python -m druthers_mcp.server

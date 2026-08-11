@@ -2,8 +2,8 @@
 import httpx
 import pytest
 
-from aleonard_mcp.api_client import ApiClient, ApiError
-from aleonard_mcp.config import Settings
+from druthers_mcp.api_client import ApiClient, ApiError
+from druthers_mcp.config import Settings
 
 
 def make_client(handler) -> ApiClient:
@@ -95,3 +95,32 @@ def test_error_raises_apierror():
     with pytest.raises(ApiError) as exc:
         client.list_my_movies()
     assert exc.value.status == 500
+
+
+def test_reauth_on_401_fails_loudly_with_env():
+    state = {"first": True}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/users/me/movies":
+            if state["first"]:
+                state["first"] = False
+                return httpx.Response(401, json={"detail": "expired"})
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    http = httpx.Client(base_url="http://api", transport=transport)
+    settings = Settings(
+        api_base_url="http://api",
+        api_token="stale-token",
+        api_email=None,
+        api_password=None,
+        env="qa",
+        request_timeout=5,
+    )
+    client = ApiClient(settings=settings, client=http)
+
+    with pytest.raises(ApiError) as exc:
+        client.list_my_movies()
+
+    assert exc.value.status == 401
+    assert "env: qa" in exc.value.message
