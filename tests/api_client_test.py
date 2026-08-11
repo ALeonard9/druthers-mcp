@@ -2,8 +2,8 @@
 import httpx
 import pytest
 
-from aleonard_mcp.api_client import ApiClient, ApiError
-from aleonard_mcp.config import Settings
+from druthers_mcp.api_client import ApiClient, ApiError
+from druthers_mcp.config import Settings
 
 
 def make_client(handler) -> ApiClient:

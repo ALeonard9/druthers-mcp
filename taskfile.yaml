@@ -10,12 +10,12 @@ tasks:
   run:
     desc: 'Run the MCP server (stdio)'
     cmds:
-      - python -m aleonard_mcp.server
+      - python -m druthers_mcp.server
 
   dev:
     desc: 'Run the MCP server under the MCP Inspector'
     cmds:
-      - mcp dev aleonard_mcp/server.py
+      - mcp dev druthers_mcp/server.py
 
   test:
     desc: 'Run pytest'
@@ -25,12 +25,12 @@ tasks:
   lint:
     desc: 'Run pylint'
     cmds:
-      - pylint aleonard_mcp tests
+      - pylint druthers_mcp tests
 
   format:
     desc: 'Format with black (single quotes)'
     cmds:
-      - black --skip-string-normalization aleonard_mcp tests
+      - black --skip-string-normalization druthers_mcp tests
 
   build:
     desc: 'Build the Docker image'

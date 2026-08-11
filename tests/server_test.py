@@ -1,11 +1,11 @@
 # pylint: disable=missing-module-docstring, missing-function-docstring
 from unittest.mock import patch
 
-from aleonard_mcp import server
-from aleonard_mcp.api_client import ApiError
+from druthers_mcp import server
+from druthers_mcp.api_client import ApiError
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_list_my_movies_shapes_output(mock_client):
     mock_client.return_value.list_my_movies.return_value = [
         {
@@ -29,7 +29,7 @@ def test_list_my_movies_shapes_output(mock_client):
     ]
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_add_movie_returns_confirmation(mock_client):
     mock_client.return_value.add_movie.return_value = {"id": "t-1"}
     msg = server.add_movie(603, "The Matrix")
@@ -37,7 +37,7 @@ def test_add_movie_returns_confirmation(mock_client):
     mock_client.return_value.add_movie.assert_called_once_with(603, "The Matrix", None)
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_movie_detail_passthrough(mock_client):
     mock_client.return_value.get_movie_detail.return_value = {
         "title": "The Matrix",
@@ -48,13 +48,13 @@ def test_movie_detail_passthrough(mock_client):
     mock_client.return_value.get_movie_detail.assert_called_once_with("m-1")
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_mark_watched_updates_tracker(mock_client):
     server.mark_watched("m-1", watched=True)
     mock_client.return_value.update_tracker.assert_called_once_with("m-1", completed=1)
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_set_note_updates_tracker(mock_client):
     server.set_note("m-1", "great film")
     mock_client.return_value.update_tracker.assert_called_once_with(
@@ -62,14 +62,14 @@ def test_set_note_updates_tracker(mock_client):
     )
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_search_movies_handles_unconfigured(mock_client):
     mock_client.return_value.search_movies.side_effect = ApiError(503, "nope")
     out = server.search_movies("matrix")
     assert out[0]["error"]
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_list_my_tv_shows_shapes_output(mock_client):
     mock_client.return_value.list_my_tv_shows.return_value = [
         {
@@ -96,7 +96,7 @@ def test_list_my_tv_shows_shapes_output(mock_client):
     ]
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_add_tv_show_returns_confirmation(mock_client):
     mock_client.return_value.add_tv_show.return_value = {"id": "t-1"}
     msg = server.add_tv_show(44932, "Severance")
@@ -106,7 +106,7 @@ def test_add_tv_show_returns_confirmation(mock_client):
     )
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_show_episodes_merges_watched_marks(mock_client):
     mock_client.return_value.list_show_episodes.return_value = [
         {
@@ -135,7 +135,7 @@ def test_show_episodes_merges_watched_marks(mock_client):
     assert [e["episode_id"] for e in season_two] == ["e-2"]
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_mark_episode_watched_and_unwatched(mock_client):
     server.mark_episode_watched("e-1")
     mock_client.return_value.mark_episode.assert_called_once_with("e-1")
@@ -143,7 +143,7 @@ def test_mark_episode_watched_and_unwatched(mock_client):
     mock_client.return_value.unmark_episode.assert_called_once_with("e-1")
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_set_tv_note_updates_tracker(mock_client):
     server.set_tv_note("s-1", "rewatch with kids")
     mock_client.return_value.update_tv_tracker.assert_called_once_with(
@@ -151,7 +151,7 @@ def test_set_tv_note_updates_tracker(mock_client):
     )
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_list_my_books_shapes_output(mock_client):
     mock_client.return_value.list_my_books.return_value = [
         {
@@ -178,7 +178,7 @@ def test_list_my_books_shapes_output(mock_client):
     ]
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_add_book_returns_confirmation(mock_client):
     mock_client.return_value.add_book.return_value = {"id": "t-1"}
     msg = server.add_book("9780441172719", "Dune")
@@ -188,7 +188,7 @@ def test_add_book_returns_confirmation(mock_client):
     )
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_list_my_games_shapes_output(mock_client):
     mock_client.return_value.list_my_games.return_value = [
         {
@@ -216,7 +216,7 @@ def test_list_my_games_shapes_output(mock_client):
     ]
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_add_game_returns_confirmation(mock_client):
     mock_client.return_value.add_game.return_value = {"id": "t-1"}
     msg = server.add_game(1234, "Breath of the Wild")
@@ -226,14 +226,14 @@ def test_add_game_returns_confirmation(mock_client):
     )
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_search_games_handles_unconfigured(mock_client):
     mock_client.return_value.search_games.side_effect = ApiError(503, "nope")
     out = server.search_games("zelda")
     assert out[0]["error"]
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_mark_game_100_percent(mock_client):
     server.mark_game_100_percent("g-1")
     mock_client.return_value.update_game_tracker.assert_called_once_with(
@@ -246,7 +246,7 @@ def test_mark_game_100_percent(mock_client):
 
 
 # Tests for completed-date MCP tools (mcp#39)
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_set_completed_date(mock_client):
     msg = server.set_completed_date("m-1", "2025-01-15")
     mock_client.return_value.update_tracker.assert_called_once_with(
@@ -255,7 +255,7 @@ def test_set_completed_date(mock_client):
     assert "2025-01-15" in msg
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_set_tv_completed_date(mock_client):
     msg = server.set_tv_completed_date("s-1", "2025-01-15")
     mock_client.return_value.update_tv_tracker.assert_called_once_with(
@@ -264,7 +264,7 @@ def test_set_tv_completed_date(mock_client):
     assert "2025-01-15" in msg
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_set_book_completed_date(mock_client):
     msg = server.set_book_completed_date("b-1", "2025-01-15")
     mock_client.return_value.update_book_tracker.assert_called_once_with(
@@ -273,7 +273,7 @@ def test_set_book_completed_date(mock_client):
     assert "2025-01-15" in msg
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_set_game_completed_date(mock_client):
     msg = server.set_game_completed_date("g-1", "2025-01-15")
     mock_client.return_value.update_game_tracker.assert_called_once_with(
@@ -283,7 +283,7 @@ def test_set_game_completed_date(mock_client):
 
 
 # Tests for remaining MCP tools test gaps (mcp#40)
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_search_tv_shows(mock_client):
     mock_client.return_value.search_tv_shows.return_value = [{"title": "Severance"}]
     out = server.search_tv_shows("severance")
@@ -291,7 +291,7 @@ def test_search_tv_shows(mock_client):
     mock_client.return_value.search_tv_shows.assert_called_once_with("severance")
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_search_books(mock_client):
     mock_client.return_value.search_books.return_value = [{"title": "Dune"}]
     out = server.search_books("dune")
@@ -299,7 +299,7 @@ def test_search_books(mock_client):
     mock_client.return_value.search_books.assert_called_once_with("dune")
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_tv_show_detail(mock_client):
     mock_client.return_value.get_tv_show_detail.return_value = {"title": "Severance"}
     out = server.tv_show_detail("s-1")
@@ -307,7 +307,7 @@ def test_tv_show_detail(mock_client):
     mock_client.return_value.get_tv_show_detail.assert_called_once_with("s-1")
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_book_detail(mock_client):
     mock_client.return_value.get_book_detail.return_value = {"title": "Dune"}
     out = server.book_detail("b-1")
@@ -315,7 +315,7 @@ def test_book_detail(mock_client):
     mock_client.return_value.get_book_detail.assert_called_once_with("b-1")
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_game_detail(mock_client):
     mock_client.return_value.get_game_detail.return_value = {"title": "Zelda"}
     out = server.game_detail("g-1")
@@ -323,7 +323,7 @@ def test_game_detail(mock_client):
     mock_client.return_value.get_game_detail.assert_called_once_with("g-1")
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_set_book_note(mock_client):
     server.set_book_note("b-1", "favorite sci-fi")
     mock_client.return_value.update_book_tracker.assert_called_once_with(
@@ -331,7 +331,7 @@ def test_set_book_note(mock_client):
     )
 
 
-@patch("aleonard_mcp.server.client")
+@patch("druthers_mcp.server.client")
 def test_set_game_note(mock_client):
     server.set_game_note("g-1", "played on switch")
     mock_client.return_value.update_game_tracker.assert_called_once_with(

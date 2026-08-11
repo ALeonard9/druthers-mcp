@@ -1,5 +1,5 @@
 """
-HTTP client for the aleonard.us API.
+HTTP client for the Druthers API.
 
 Thin wrapper over the ``/v1`` endpoints the MCP tools need. Handles token
 acquisition (either a pre-issued ``API_TOKEN`` or an email/password exchange)
@@ -10,7 +10,7 @@ from typing import Any, Optional
 
 import httpx
 
-from aleonard_mcp.config import Settings, get_settings
+from druthers_mcp.config import Settings, get_settings
 
 
 class ApiError(Exception):
@@ -24,7 +24,7 @@ class ApiError(Exception):
 
 class ApiClient:  # pylint: disable=too-many-public-methods
     """
-    Authenticated client for the aleonard.us API.
+    Authenticated client for the Druthers API.
 
     A deliberately flat wrapper — one method per endpoint, grouped by domain
     (movies/tv/books/games), so it grows past pylint's method

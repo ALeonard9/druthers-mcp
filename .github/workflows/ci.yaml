@@ -21,8 +21,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/dev.txt
       - name: Lint
-        run: pylint aleonard_mcp tests --disable=too-few-public-methods
+        run: pylint druthers_mcp tests --disable=too-few-public-methods
       - name: Black check
-        run: black --check --skip-string-normalization aleonard_mcp tests
+        run: black --check --skip-string-normalization druthers_mcp tests
       - name: Test
         run: pytest tests -q

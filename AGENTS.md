@@ -182,7 +182,7 @@ and were never revisited.
   `<name>.test.tsx` alongside it once the React Testing Library setup from
   #136/#137 is in place. Pure logic still belongs in `src/lib/*.ts` with a
   `.test.ts` sibling, not inside the component.
-- **New MCP tool** (`aleonard_mcp/server.py`): add a test in
+- **New MCP tool** (`druthers_mcp/server.py`): add a test in
   `tests/server_test.py` following the pattern of the nearest existing
   sibling tool (e.g. a new `set_*_note` tool mirrors `set_note`'s test).
 - Coverage is a floor, not a target: CI fails if total coverage drops below
