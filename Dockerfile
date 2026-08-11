@@ -6,7 +6,16 @@ WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
 
 COPY requirements/base.txt requirements/base.txt
-RUN pip install --no-cache-dir -r requirements/base.txt
+# Install the dependencies, then drop pip itself. A runtime container has no
+# need for a package manager, and keeping one costs us a false security
+# finding: pip bundles its own vendored copies of msgpack and setuptools plus
+# a CycloneDX manifest (pip/_vendor/bom.cdx.json) declaring them. Scanners read
+# that manifest and report those versions as installed packages even though
+# nothing in the app imports them and no .dist-info for them exists. Removing
+# pip removes both the vendored code and the manifest.
+RUN pip install --no-cache-dir -r requirements/base.txt \
+    && python -m pip uninstall -y pip \
+    && rm -rf /usr/local/lib/python*/ensurepip
 
 COPY aleonard_mcp ./aleonard_mcp
 
