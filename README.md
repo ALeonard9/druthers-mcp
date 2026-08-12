@@ -41,8 +41,8 @@ python3.14 -m venv .venv && source .venv/bin/activate
 pip install -r requirements/dev.txt
 cp env/dev.env.template env/dev.env          # set API_BASE_URL + API_TOKEN
 set -a && . env/dev.env && set +a
-python -m aleonard_mcp.server                # stdio server
-# or explore interactively: mcp dev aleonard_mcp/server.py
+python -m druthers_mcp.server                # stdio server
+# or explore interactively: mcp dev druthers_mcp/server.py
 ```
 
 Against a local `druthers-api` (`API_BASE_URL=http://127.0.0.1:8000`), an
@@ -65,13 +65,13 @@ Register the stdio server — it shows up in your client as **`druthers`**
 
 ```bash
 # Claude Code (local checkout)
-claude mcp add druthers --scope user -- /path/to/druthers-mcp/bin/aleonard-mcp
+claude mcp add druthers --scope user -- /path/to/druthers-mcp/bin/druthers-mcp
 
 # Claude Desktop / Code (containerized, pointed at prod)
 claude mcp add druthers \
   -e API_BASE_URL=https://api.druthers.io \
   -e API_TOKEN=drk_... \
-  -- python -m aleonard_mcp.server
+  -- python -m druthers_mcp.server
 ```
 
 Or run the published image `ghcr.io/aleonard9/druthers-mcp` with the same env.

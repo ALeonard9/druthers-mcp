@@ -1,8 +1,8 @@
 """
-aleonard.us MCP server.
+Druthers MCP server.
 
 Exposes the personal media trackers (Movies, TV, Books) as MCP
-tools backed by the aleonard.us API, so an LLM (e.g. Claude) can search,
+tools backed by the Druthers API, so an LLM (e.g. Claude) can search,
 list, add, and annotate them on the user's behalf — including TV episode
 watch marks. Runs over stdio.
 """
@@ -22,13 +22,13 @@ except ImportError:
             MCPServer as FastMCP,
         )  # pylint: disable=import-error,no-name-in-module
 
-from aleonard_mcp.api_client import ApiClient, ApiError
-from aleonard_mcp.config import get_settings
+from druthers_mcp.api_client import ApiClient, ApiError
+from druthers_mcp.config import get_settings
 
 logging.basicConfig(level=get_settings().log_level.upper())
-logger = logging.getLogger("aleonard_mcp")
+logger = logging.getLogger("druthers_mcp")
 
-mcp = FastMCP("aleonard-us")
+mcp = FastMCP("druthers")
 
 _client: Optional[ApiClient] = None
 
@@ -356,7 +356,7 @@ def mark_game_100_percent(game_id: str, is_100_percent: bool = True) -> str:
 
 def main() -> None:
     """Run the MCP server over stdio."""
-    logger.info("Starting aleonard.us MCP server (stdio)")
+    logger.info("Starting Druthers MCP server (stdio)")
     mcp.run()
 
 

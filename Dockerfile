@@ -17,14 +17,14 @@ RUN pip install --no-cache-dir -r requirements/base.txt \
     && python -m pip uninstall -y pip \
     && rm -rf /usr/local/lib/python*/ensurepip
 
-COPY aleonard_mcp ./aleonard_mcp
+COPY druthers_mcp ./druthers_mcp
 
 USER app
 
 # Liveness probe: this is a stdio server with no port, so verify the server
 # package still imports cleanly. Resolves Trivy DS-0026 (no HEALTHCHECK).
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD python -c "import aleonard_mcp" || exit 1
+  CMD python -c "import druthers_mcp" || exit 1
 
 # MCP servers communicate over stdio.
-ENTRYPOINT ["python", "-m", "aleonard_mcp.server"]
+ENTRYPOINT ["python", "-m", "druthers_mcp.server"]
