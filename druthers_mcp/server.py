@@ -25,8 +25,18 @@ except ImportError:
 from druthers_mcp.api_client import ApiClient, ApiError
 from druthers_mcp.config import get_settings
 
-logging.basicConfig(level=get_settings().log_level.upper())
+settings = get_settings()
+logging.basicConfig(level=settings.log_level.upper())
 logger = logging.getLogger("druthers_mcp")
+
+if settings.env != "prod":
+    logger.warning(
+        "Running in %s environment against %s", settings.env, settings.api_base_url
+    )
+else:
+    logger.info(
+        "Running in %s environment against %s", settings.env, settings.api_base_url
+    )
 
 mcp = FastMCP("druthers")
 
@@ -352,6 +362,194 @@ def mark_game_100_percent(game_id: str, is_100_percent: bool = True) -> str:
     client().update_game_tracker(game_id, is_100_percent=is_100_percent)
     state = "100% completed" if is_100_percent else "not 100% completed"
     return f"Marked game {game_id} as {state}."
+
+
+def _format_comparison_domain(d: dict) -> dict | str:
+    if not d.get("rankings_visible"):
+        return "Visibility limit: Rankings are private. Cannot compare lists."
+
+    summary = {}
+    status = d.get("alignment_status")
+    if status == "ready":
+        summary["alignment"] = (
+            f"Score: {d.get('alignment_score')}%. "
+            f"Based on {d.get('shared_ranked_count')} shared ranked items."
+        )
+    elif status == "not_enough_overlap":
+        summary["alignment"] = (
+            "Not enough overlap to calculate score "
+            f"(only {d.get('shared_ranked_count')} shared ranked items)."
+        )
+    else:
+        summary["alignment"] = "Rankings are hidden."
+
+    if d.get("most_aligned"):
+        summary["closest_agreements"] = [
+            f"{i['title']} (You: {i['your_rank']}, Them: {i['their_rank']}, Gap: {i['gap']})"
+            for i in d.get("most_aligned")
+        ]
+    if d.get("biggest_gaps"):
+        summary["biggest_gaps"] = [
+            f"{i['title']} (You: {i['your_rank']}, Them: {i['their_rank']}, Gap: {i['gap']})"
+            for i in d.get("biggest_gaps")
+        ]
+
+    if d.get("watchlist_visible"):
+        common = d.get("common_watchlist", [])
+        if common:
+            summary["common_watchlist"] = [i["title"] for i in common]
+        else:
+            summary["common_watchlist"] = "No common items on watchlist."
+    else:
+        summary["common_watchlist"] = "Visibility limit: Their watchlist is private."
+
+    return summary
+
+
+@mcp.tool()
+def compare_users(handle: str, domain: Optional[str] = None) -> dict:
+    """
+    Compare your lists against another user by handle.
+    Optionally restrict to one domain ('movies', 'tv-shows', 'books', 'games').
+    Returns common watchlist items, biggest ranking gaps, and closest agreements.
+    Only data you are permitted to see based on the other user's visibility settings is returned.
+    """
+    try:
+        data = client().compare_with_user(handle)
+    except ApiError as err:
+        if err.status == 404:
+            return {"error": f"User @{handle} not found or not visible to you."}
+        raise
+
+    domains = data.get("domains", [])
+    if domain:
+        domains = [d for d in domains if d.get("category") == domain]
+        if not domains:
+            return {"error": f"Domain '{domain}' not found or invalid."}
+
+    result = {
+        "target_user": f"{data.get('display_name')} (@{data.get('handle')})",
+        "relationship": data.get("relationship"),
+        "domains": {},
+    }
+
+    for d in domains:
+        result["domains"][d.get("category")] = _format_comparison_domain(d)
+
+    return result
+
+
+# The nine visibility settings an assistant can read or change, keyed by the
+# short names used in the tool args and responses (mcp#36). The values are
+# the DbUser tier columns the API accepts, so a new domain shows up here by
+# hand — mirroring the shelf registry on the API side.
+_VISIBILITY_TARGETS = {
+    "profile": "visibility_profile",
+    "movies": "visibility_movies",
+    "tv": "visibility_tv",
+    "books": "visibility_books",
+    "games": "visibility_games",
+    "movies_watchlist": "visibility_watchlist_movies",
+    "tv_watchlist": "visibility_watchlist_tv",
+    "books_watchlist": "visibility_watchlist_books",
+    "games_watchlist": "visibility_watchlist_games",
+}
+
+_VISIBILITY_TIERS = ("private", "friends", "public")
+
+
+def _shape_visibility(data: dict) -> dict:
+    """Rename the API's tier field names onto the tool's short targets."""
+    shaped = {
+        "handle": data.get("handle"),
+        "default_privacy": data.get("default_privacy"),
+    }
+    for target, field in _VISIBILITY_TARGETS.items():
+        shaped[target] = data.get(field)
+    return shaped
+
+
+@mcp.tool()
+def get_visibility() -> dict:
+    """
+    Read the user's current list-sharing visibility.
+
+    Returns the claimed profile handle and the current tier of all nine
+    visibility settings: the profile, the four shelves (movies, tv, books,
+    games), and each shelf's watchlist. Each setting is one of 'private'
+    (only you can see it), 'friends' (your accepted friends can see it), or
+    'public' (anyone on the internet can see it). A null shelf tier inherits
+    'default_privacy'. Do not treat 'public' as a casual setting — it exposes
+    the list on your public profile page to anyone, logged in or not.
+    """
+    return _shape_visibility(client().get_visibility())
+
+
+def _validate_visibility_input(
+    target: Optional[str], tier: Optional[str], handle: Optional[str]
+) -> Optional[str]:
+    """Return a user-facing error string, or None when the input is valid."""
+    if target is None and tier is not None:
+        return "target is required when tier is given."
+    if target is None and handle is None:
+        return "Pass a target (which setting) and tier, or a handle."
+    if target is not None and target not in _VISIBILITY_TARGETS:
+        return f"Unknown target '{target}'. Target must be one of: " + ", ".join(
+            _VISIBILITY_TARGETS
+        )
+    if target is not None and tier is None:
+        return f"tier is required when target='{target}' is given."
+    if tier is not None and tier not in _VISIBILITY_TIERS:
+        return f"Unknown tier '{tier}'. Tier must be one of: " + ", ".join(
+            _VISIBILITY_TIERS
+        )
+    return None
+
+
+@mcp.tool()
+def set_visibility(
+    target: Optional[str] = None,
+    tier: Optional[str] = None,
+    handle: Optional[str] = None,
+) -> dict:
+    """
+    Change one visibility setting, or claim or clear the profile handle.
+
+    `target` is the setting to change: 'profile', 'movies', 'tv', 'books',
+    'games', 'movies_watchlist', 'tv_watchlist', 'books_watchlist', or
+    'games_watchlist'. `tier` is its new value: 'private' (only you can see
+    it), 'friends' (your accepted friends can see it), or 'public' (anyone
+    on the internet can see it). Confirm with the user before setting
+    anything to 'public'.
+
+    `handle` is optional: pass it to claim a handle, or '' to clear it. A
+    handle is required before any setting leaves 'private'.
+
+    The API rejects any change that breaks the sharing rules (for example a
+    'public' shelf under a 'private' profile) and this tool returns the
+    API's explanation of why. Returns the resulting visibility settings.
+    """
+    error = _validate_visibility_input(target, tier, handle)
+    if error is not None:
+        return {"error": error}
+
+    body = {}
+    if target is not None:
+        body[_VISIBILITY_TARGETS[target]] = tier
+    if handle is not None:
+        body["handle"] = handle
+    try:
+        data = client().update_visibility(**body)
+    except ApiError as err:
+        if err.status == 422 and err.message.startswith("Pick a handle"):
+            return {
+                "error": (
+                    f"{err.message} Claim one by calling set_visibility again "
+                    "with the handle argument, e.g. handle='your-handle'."
+                )
+            }
+        return {"error": err.message}
+    return _shape_visibility(data)
 
 
 def main() -> None:

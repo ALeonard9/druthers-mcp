@@ -50,9 +50,12 @@ email/password pair also works instead of an API key.
 
 | Env var | Description |
 |---|---|
+| `MCP_ENV` | Target environment (`prod`, `qa`, `dev`). Defaults to `prod`. |
 | `API_BASE_URL` | Base URL of `druthers-api` |
 | `API_TOKEN` | Personal API key (`drk_…`) — preferred |
 | `API_EMAIL` / `API_PASSWORD` | Local-dev fallback credentials |
+
+**Note**: MCP servers load their environment at process start. Changing an env file requires an MCP reconnect or restarting Claude Code to take effect.
 
 `task test` (pytest) · `task lint` (pylint) · `task format` (black). Pre-commit
 runs Gitleaks + lint on commit; tests run at pre-push (changed-only). CI runs the

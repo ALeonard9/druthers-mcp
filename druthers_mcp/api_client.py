@@ -53,7 +53,8 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         s = self._settings
         if not (s.api_email and s.api_password):
             raise ApiError(
-                401, "No API_TOKEN and no API_EMAIL/API_PASSWORD to log in with"
+                401,
+                f"No API_TOKEN and no API_EMAIL/API_PASSWORD to log in with (env: {s.env})",
             )
         resp = self._client.post(
             "/v1/auth/token",
@@ -292,6 +293,20 @@ class ApiClient:  # pylint: disable=too-many-public-methods
     def update_game_tracker(self, game_id: str, **fields) -> dict:
         """Update the user's tracker for a catalog game id."""
         return self._request("PUT", f"/v1/users/me/games/{game_id}", json=fields)
+
+    # --- comparison ---
+    def compare_with_user(self, handle: str) -> dict:
+        """Get comparison data for all domains against another user."""
+        return self._request("GET", f"/v1/users/me/comparison/{handle}")
+
+    # --- visibility ---
+    def get_visibility(self) -> dict:
+        """Return the authenticated user's visibility tiers and claimed handle."""
+        return self._request("GET", "/v1/users/me/visibility")
+
+    def update_visibility(self, **fields) -> dict:
+        """Update visibility tiers and/or the handle; only sent fields change."""
+        return self._request("PUT", "/v1/users/me/visibility", json=fields)
 
 
 def _detail(resp: httpx.Response) -> str:

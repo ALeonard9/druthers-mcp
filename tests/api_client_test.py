@@ -1,4 +1,6 @@
 # pylint: disable=missing-module-docstring, missing-function-docstring
+import json
+
 import httpx
 import pytest
 
@@ -95,3 +97,72 @@ def test_error_raises_apierror():
     with pytest.raises(ApiError) as exc:
         client.list_my_movies()
     assert exc.value.status == 500
+
+
+def test_reauth_on_401_fails_loudly_with_env():
+    state = {"first": True}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/users/me/movies":
+            if state["first"]:
+                state["first"] = False
+                return httpx.Response(401, json={"detail": "expired"})
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    http = httpx.Client(base_url="http://api", transport=transport)
+    settings = Settings(
+        api_base_url="http://api",
+        api_token="stale-token",
+        api_email=None,
+        api_password=None,
+        env="qa",
+        request_timeout=5,
+    )
+    client = ApiClient(settings=settings, client=http)
+
+    with pytest.raises(ApiError) as exc:
+        client.list_my_movies()
+
+    assert exc.value.status == 401
+    assert "env: qa" in exc.value.message
+
+
+def test_get_visibility_requests_endpoint():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == "/v1/users/me/visibility"
+        assert request.headers["Authorization"] == "Bearer seed-token"
+        return httpx.Response(200, json={"handle": "adam-prime"})
+
+    client = make_client(handler)
+    assert client.get_visibility()["handle"] == "adam-prime"
+
+
+def test_update_visibility_puts_only_sent_fields():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "PUT"
+        assert request.url.path == "/v1/users/me/visibility"
+        assert json.loads(request.read()) == {"visibility_movies": "public"}
+        return httpx.Response(200, json={"visibility_movies": "public"})
+
+    client = make_client(handler)
+    out = client.update_visibility(visibility_movies="public")
+    assert out["visibility_movies"] == "public"
+
+
+def test_update_visibility_propagates_rejection_detail():
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            422,
+            json={
+                "detail": "Movies is set to public, so your profile must be "
+                "at least public - it is currently friends"
+            },
+        )
+
+    client = make_client(handler)
+    with pytest.raises(ApiError) as exc:
+        client.update_visibility(visibility_movies="public")
+    assert exc.value.status == 422
+    assert "it is currently friends" in exc.value.message
