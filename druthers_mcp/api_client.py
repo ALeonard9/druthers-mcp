@@ -299,6 +299,15 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         """Get comparison data for all domains against another user."""
         return self._request("GET", f"/v1/users/me/comparison/{handle}")
 
+    # --- visibility ---
+    def get_visibility(self) -> dict:
+        """Return the authenticated user's visibility tiers and claimed handle."""
+        return self._request("GET", "/v1/users/me/visibility")
+
+    def update_visibility(self, **fields) -> dict:
+        """Update visibility tiers and/or the handle; only sent fields change."""
+        return self._request("PUT", "/v1/users/me/visibility", json=fields)
+
 
 def _detail(resp: httpx.Response) -> str:
     try:

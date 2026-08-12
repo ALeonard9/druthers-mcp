@@ -439,6 +439,119 @@ def compare_users(handle: str, domain: Optional[str] = None) -> dict:
     return result
 
 
+# The nine visibility settings an assistant can read or change, keyed by the
+# short names used in the tool args and responses (mcp#36). The values are
+# the DbUser tier columns the API accepts, so a new domain shows up here by
+# hand — mirroring the shelf registry on the API side.
+_VISIBILITY_TARGETS = {
+    "profile": "visibility_profile",
+    "movies": "visibility_movies",
+    "tv": "visibility_tv",
+    "books": "visibility_books",
+    "games": "visibility_games",
+    "movies_watchlist": "visibility_watchlist_movies",
+    "tv_watchlist": "visibility_watchlist_tv",
+    "books_watchlist": "visibility_watchlist_books",
+    "games_watchlist": "visibility_watchlist_games",
+}
+
+_VISIBILITY_TIERS = ("private", "friends", "public")
+
+
+def _shape_visibility(data: dict) -> dict:
+    """Rename the API's tier field names onto the tool's short targets."""
+    shaped = {
+        "handle": data.get("handle"),
+        "default_privacy": data.get("default_privacy"),
+    }
+    for target, field in _VISIBILITY_TARGETS.items():
+        shaped[target] = data.get(field)
+    return shaped
+
+
+@mcp.tool()
+def get_visibility() -> dict:
+    """
+    Read the user's current list-sharing visibility.
+
+    Returns the claimed profile handle and the current tier of all nine
+    visibility settings: the profile, the four shelves (movies, tv, books,
+    games), and each shelf's watchlist. Each setting is one of 'private'
+    (only you can see it), 'friends' (your accepted friends can see it), or
+    'public' (anyone on the internet can see it). A null shelf tier inherits
+    'default_privacy'. Do not treat 'public' as a casual setting — it exposes
+    the list on your public profile page to anyone, logged in or not.
+    """
+    return _shape_visibility(client().get_visibility())
+
+
+def _validate_visibility_input(
+    target: Optional[str], tier: Optional[str], handle: Optional[str]
+) -> Optional[str]:
+    """Return a user-facing error string, or None when the input is valid."""
+    if target is None and tier is not None:
+        return "target is required when tier is given."
+    if target is None and handle is None:
+        return "Pass a target (which setting) and tier, or a handle."
+    if target is not None and target not in _VISIBILITY_TARGETS:
+        return f"Unknown target '{target}'. Target must be one of: " + ", ".join(
+            _VISIBILITY_TARGETS
+        )
+    if target is not None and tier is None:
+        return f"tier is required when target='{target}' is given."
+    if tier is not None and tier not in _VISIBILITY_TIERS:
+        return f"Unknown tier '{tier}'. Tier must be one of: " + ", ".join(
+            _VISIBILITY_TIERS
+        )
+    return None
+
+
+@mcp.tool()
+def set_visibility(
+    target: Optional[str] = None,
+    tier: Optional[str] = None,
+    handle: Optional[str] = None,
+) -> dict:
+    """
+    Change one visibility setting, or claim or clear the profile handle.
+
+    `target` is the setting to change: 'profile', 'movies', 'tv', 'books',
+    'games', 'movies_watchlist', 'tv_watchlist', 'books_watchlist', or
+    'games_watchlist'. `tier` is its new value: 'private' (only you can see
+    it), 'friends' (your accepted friends can see it), or 'public' (anyone
+    on the internet can see it). Confirm with the user before setting
+    anything to 'public'.
+
+    `handle` is optional: pass it to claim a handle, or '' to clear it. A
+    handle is required before any setting leaves 'private'.
+
+    The API rejects any change that breaks the sharing rules (for example a
+    'public' shelf under a 'private' profile) and this tool returns the
+    API's explanation of why. Returns the resulting visibility settings.
+    """
+    error = _validate_visibility_input(target, tier, handle)
+    if error is not None:
+        return {"error": error}
+
+    body = {}
+    if target is not None:
+        body[_VISIBILITY_TARGETS[target]] = tier
+    if handle is not None:
+        body["handle"] = handle
+    try:
+        data = client().update_visibility(**body)
+    except ApiError as err:
+        if err.status == 422 and err.message.startswith("Pick a handle"):
+            return {
+                "error": (
+                    f"{err.message} Claim one by calling set_visibility again "
+                    "with the handle argument, e.g. handle='your-handle'."
+                )
+            }
+        return {"error": err.message}
+    return _shape_visibility(data)
+
+
 def main() -> None:
     """Run the MCP server over stdio."""
     logger.info("Starting Druthers MCP server (stdio)")

@@ -1,4 +1,4 @@
-# pylint: disable=missing-module-docstring, missing-function-docstring
+# pylint: disable=missing-module-docstring, missing-function-docstring, protected-access
 from unittest.mock import patch
 
 from druthers_mcp import server
@@ -435,3 +435,247 @@ def test_compare_users_not_found(mock_client):
     out = server.compare_users("nobody")
     assert "error" in out
     assert "nobody" in out["error"]
+
+
+# Tests for visibility tools (mcp#36)
+NINE_VISIBILITY_TARGETS = [
+    "profile",
+    "movies",
+    "tv",
+    "books",
+    "games",
+    "movies_watchlist",
+    "tv_watchlist",
+    "books_watchlist",
+    "games_watchlist",
+]
+
+
+@patch("druthers_mcp.server.client")
+def test_get_visibility_reports_all_nine_tiers_and_handle(mock_client):
+    api = {
+        "handle": "adam-prime",
+        "default_privacy": "friends",
+        "visibility_profile": "public",
+        "visibility_movies": "private",
+        "visibility_tv": "friends",
+        "visibility_books": "public",
+        "visibility_games": "private",
+        "visibility_watchlist_movies": "friends",
+        "visibility_watchlist_tv": "public",
+        "visibility_watchlist_books": "private",
+        "visibility_watchlist_games": "friends",
+    }
+    mock_client.return_value.get_visibility.return_value = api
+
+    out = server.get_visibility()
+
+    assert out["handle"] == "adam-prime"
+    assert out["default_privacy"] == "friends"
+    assert out["profile"] == api["visibility_profile"]
+    assert out["movies"] == api["visibility_movies"]
+    assert out["tv"] == api["visibility_tv"]
+    assert out["books"] == api["visibility_books"]
+    assert out["games"] == api["visibility_games"]
+    assert out["movies_watchlist"] == api["visibility_watchlist_movies"]
+    assert out["tv_watchlist"] == api["visibility_watchlist_tv"]
+    assert out["books_watchlist"] == api["visibility_watchlist_books"]
+    assert out["games_watchlist"] == api["visibility_watchlist_games"]
+    assert sorted(set(NINE_VISIBILITY_TARGETS)) == sorted(
+        set(NINE_VISIBILITY_TARGETS) & set(out)
+    )
+
+
+@patch("druthers_mcp.server.client")
+def test_set_visibility_sends_shelf_tier(mock_client):
+    mock_client.return_value.update_visibility.return_value = {
+        "handle": "adam-prime",
+        "default_privacy": "friends",
+        "visibility_profile": "private",
+        "visibility_movies": "public",
+        "visibility_tv": None,
+        "visibility_books": None,
+        "visibility_games": None,
+        "visibility_watchlist_movies": None,
+        "visibility_watchlist_tv": None,
+        "visibility_watchlist_books": None,
+        "visibility_watchlist_games": None,
+    }
+
+    out = server.set_visibility("movies", "public")
+
+    mock_client.return_value.update_visibility.assert_called_once_with(
+        visibility_movies="public"
+    )
+    assert out["movies"] == "public"
+
+
+@patch("druthers_mcp.server.client")
+def test_set_visibility_sends_watchlist_tier(mock_client):
+    mock_client.return_value.update_visibility.return_value = {
+        "handle": "adam-prime",
+        "default_privacy": "friends",
+        "visibility_profile": "private",
+        "visibility_movies": None,
+        "visibility_tv": None,
+        "visibility_books": None,
+        "visibility_games": None,
+        "visibility_watchlist_movies": None,
+        "visibility_watchlist_tv": None,
+        "visibility_watchlist_books": None,
+        "visibility_watchlist_games": "friends",
+    }
+
+    server.set_visibility("games_watchlist", "friends")
+
+    mock_client.return_value.update_visibility.assert_called_once_with(
+        visibility_watchlist_games="friends"
+    )
+
+
+@patch("druthers_mcp.server.client")
+def test_set_visibility_claims_handle_alongside_tier(mock_client):
+    mock_client.return_value.update_visibility.return_value = {
+        "handle": "adam-prime",
+        "default_privacy": "friends",
+        "visibility_profile": "friends",
+        "visibility_movies": None,
+        "visibility_tv": None,
+        "visibility_books": None,
+        "visibility_games": None,
+        "visibility_watchlist_movies": None,
+        "visibility_watchlist_tv": None,
+        "visibility_watchlist_books": None,
+        "visibility_watchlist_games": None,
+    }
+
+    out = server.set_visibility("profile", "friends", handle="adam-prime")
+
+    mock_client.return_value.update_visibility.assert_called_once_with(
+        visibility_profile="friends", handle="adam-prime"
+    )
+    assert out["handle"] == "adam-prime"
+
+
+@patch("druthers_mcp.server.client")
+def test_set_visibility_claims_handle_alone(mock_client):
+    mock_client.return_value.update_visibility.return_value = {
+        "handle": "adam-prime",
+        "default_privacy": "friends",
+        "visibility_profile": "private",
+        "visibility_movies": None,
+        "visibility_tv": None,
+        "visibility_books": None,
+        "visibility_games": None,
+        "visibility_watchlist_movies": None,
+        "visibility_watchlist_tv": None,
+        "visibility_watchlist_books": None,
+        "visibility_watchlist_games": None,
+    }
+
+    out = server.set_visibility(handle="adam-prime")
+
+    mock_client.return_value.update_visibility.assert_called_once_with(
+        handle="adam-prime"
+    )
+    assert out["handle"] == "adam-prime"
+
+
+@patch("druthers_mcp.server.client")
+def test_set_visibility_invariant_violation_returns_api_explanation(mock_client):
+    mock_client.return_value.update_visibility.side_effect = ApiError(
+        422,
+        "Movies is set to public, so your profile must be at least public "
+        "- it is currently friends",
+    )
+
+    out = server.set_visibility("movies", "public")
+
+    assert out["error"] == (
+        "Movies is set to public, so your profile must be at least public "
+        "- it is currently friends"
+    )
+
+
+@patch("druthers_mcp.server.client")
+def test_set_visibility_without_handle_returns_actionable_guidance(mock_client):
+    mock_client.return_value.update_visibility.side_effect = ApiError(
+        422, "Pick a handle before sharing anything - it becomes your profile URL"
+    )
+
+    out = server.set_visibility("movies", "public")
+
+    assert "Pick a handle before sharing anything" in out["error"]
+    assert "set_visibility" in out["error"]
+    assert "handle" in out["error"]
+
+
+@patch("druthers_mcp.server.client")
+def test_set_visibility_rejects_unknown_target(mock_client):
+    out = server.set_visibility("audiobooks", "public")
+
+    assert "Unknown target 'audiobooks'" in out["error"]
+    mock_client.return_value.update_visibility.assert_not_called()
+
+
+@patch("druthers_mcp.server.client")
+def test_set_visibility_rejects_unknown_tier(mock_client):
+    out = server.set_visibility("movies", "everyone")
+
+    assert "Unknown tier 'everyone'" in out["error"]
+    mock_client.return_value.update_visibility.assert_not_called()
+
+
+@patch("druthers_mcp.server.client")
+def test_set_visibility_requires_tier_with_target(mock_client):
+    out = server.set_visibility("movies")
+
+    assert "tier is required" in out["error"]
+    mock_client.return_value.update_visibility.assert_not_called()
+
+
+@patch("druthers_mcp.server.client")
+def test_set_visibility_requires_target_with_tier(mock_client):
+    out = server.set_visibility(tier="public")
+
+    assert "target is required" in out["error"]
+    mock_client.return_value.update_visibility.assert_not_called()
+
+
+@patch("druthers_mcp.server.client")
+def test_set_visibility_requires_something_to_do(mock_client):
+    out = server.set_visibility()
+
+    assert "Pass a target" in out["error"]
+    mock_client.return_value.update_visibility.assert_not_called()
+
+
+def _registered_tool_names() -> set:
+    return {t.name for t in server.mcp._tool_manager.list_tools()}
+
+
+def test_visibility_tools_are_registered():
+    names = _registered_tool_names()
+    assert "get_visibility" in names
+    assert "set_visibility" in names
+
+
+def test_no_tool_accepts_or_declines_friend_requests():
+    names = _registered_tool_names()
+    assert not names & {
+        "accept_friend_request",
+        "decline_friend_request",
+        "reject_friend_request",
+        "respond_friend_request",
+    }
+
+
+def test_visibility_tool_descriptions_state_what_each_tier_exposes():
+    by_name = {t.name: t.description for t in server.mcp._tool_manager.list_tools()}
+    for name in ("get_visibility", "set_visibility"):
+        desc = by_name[name]
+        assert "private" in desc
+        assert "friends" in desc
+        assert "public" in desc
+        assert "internet" in desc
+    assert "watchlist" in by_name["set_visibility"]
