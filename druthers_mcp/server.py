@@ -8,7 +8,7 @@ watch marks. Runs over stdio.
 """
 
 import logging
-from typing import Optional
+from typing import Literal, Optional
 
 try:
     from mcp.server.fastmcp import (
@@ -42,6 +42,10 @@ mcp = FastMCP("druthers")
 
 _client: Optional[ApiClient] = None
 
+ListSort = Literal["rank", "title", "completed_at"]
+_DEFAULT_LIST_LIMIT = 50
+_MAX_LIST_LIMIT = 100
+
 
 def client() -> ApiClient:
     """Return a lazily-initialized, reused API client."""
@@ -49,6 +53,49 @@ def client() -> ApiClient:
     if _client is None:
         _client = ApiClient()
     return _client
+
+
+def _paginate_list(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    items: list[dict],
+    limit: int,
+    offset: int,
+    sort: ListSort,
+    watched: Optional[bool],
+    search: Optional[str],
+) -> dict:
+    """Filter, sort, and paginate an already-shaped tracker list."""
+    if not 1 <= limit <= _MAX_LIST_LIMIT:
+        raise ValueError(f"limit must be between 1 and {_MAX_LIST_LIMIT}")
+    if offset < 0:
+        raise ValueError("offset must be zero or greater")
+
+    filtered = items
+    if watched is not None:
+        filtered = [
+            item
+            for item in filtered
+            if bool(item.get("watched", item.get("on_rankings"))) is watched
+        ]
+    if search and search.strip():
+        query = search.strip().casefold()
+        filtered = [
+            item for item in filtered if query in (item.get("title") or "").casefold()
+        ]
+
+    populated = [item for item in filtered if item.get(sort) is not None]
+    missing = [item for item in filtered if item.get(sort) is None]
+    if sort == "title":
+        populated.sort(key=lambda item: item["title"].casefold())
+    else:
+        populated.sort(key=lambda item: item[sort], reverse=sort == "completed_at")
+    ordered = populated + missing
+    return {
+        "items": ordered[offset : offset + limit],
+        "total": len(filtered),
+        "limit": limit,
+        "offset": offset,
+        "unranked_count": sum(item.get("rank") is None for item in filtered),
+    }
 
 
 @mcp.tool()
@@ -66,12 +113,21 @@ def search_movies(query: str) -> list[dict]:
 
 
 @mcp.tool()
-def list_my_movies() -> list[dict]:
+def list_my_movies(
+    limit: int = _DEFAULT_LIST_LIMIT,
+    offset: int = 0,
+    sort: ListSort = "rank",
+    watched: Optional[bool] = None,
+    search: Optional[str] = None,
+) -> dict:
     """
-    List the movies the user is tracking, with watched status and notes.
+    List tracked movies in paginated results (default 50, maximum 100).
+    Use `offset` for the next page; `total` reports all matching items before
+    pagination. Sort by 'rank', 'title', or 'completed_at'; null values sort
+    last. Optionally filter by watched status or search titles.
     """
     movies = client().list_my_movies()
-    return [
+    items = [
         {
             "movie_id": m["movie"]["id"],
             "title": m["movie"]["title"],
@@ -82,6 +138,7 @@ def list_my_movies() -> list[dict]:
         }
         for m in movies
     ]
+    return _paginate_list(items, limit, offset, sort, watched, search)
 
 
 @mcp.tool()
@@ -134,13 +191,21 @@ def search_tv_shows(query: str) -> list[dict]:
 
 
 @mcp.tool()
-def list_my_tv_shows() -> list[dict]:
+def list_my_tv_shows(
+    limit: int = _DEFAULT_LIST_LIMIT,
+    offset: int = 0,
+    sort: ListSort = "rank",
+    watched: Optional[bool] = None,
+    search: Optional[str] = None,
+) -> dict:
     """
-    List the TV shows the user is tracking, with list membership (watchlist /
-    rankings), rank, and notes.
+    List tracked TV shows in paginated results (default 50, maximum 100).
+    Use `offset` for the next page; `total` reports all matching items before
+    pagination. Sort by 'rank', 'title', or 'completed_at'; null values sort
+    last. `watched` filters Rankings membership. Optionally search titles.
     """
     shows = client().list_my_tv_shows()
-    return [
+    items = [
         {
             "show_id": s["tv_show"]["id"],
             "title": s["tv_show"]["title"],
@@ -153,6 +218,7 @@ def list_my_tv_shows() -> list[dict]:
         }
         for s in shows
     ]
+    return _paginate_list(items, limit, offset, sort, watched, search)
 
 
 @mcp.tool()
@@ -238,13 +304,21 @@ def search_books(query: str) -> list[dict]:
 
 
 @mcp.tool()
-def list_my_books() -> list[dict]:
+def list_my_books(
+    limit: int = _DEFAULT_LIST_LIMIT,
+    offset: int = 0,
+    sort: ListSort = "rank",
+    watched: Optional[bool] = None,
+    search: Optional[str] = None,
+) -> dict:
     """
-    List the books the user is tracking, with list membership (to-read
-    watchlist / read rankings), rank, and notes.
+    List tracked books in paginated results (default 50, maximum 100).
+    Use `offset` for the next page; `total` reports all matching items before
+    pagination. Sort by 'rank', 'title', or 'completed_at'; null values sort
+    last. `watched` filters read Rankings membership. Optionally search titles.
     """
     books = client().list_my_books()
-    return [
+    items = [
         {
             "book_id": b["book"]["id"],
             "title": b["book"]["title"],
@@ -257,6 +331,7 @@ def list_my_books() -> list[dict]:
         }
         for b in books
     ]
+    return _paginate_list(items, limit, offset, sort, watched, search)
 
 
 @mcp.tool()
@@ -303,13 +378,21 @@ def search_games(query: str) -> list[dict]:
 
 
 @mcp.tool()
-def list_my_games() -> list[dict]:
+def list_my_games(
+    limit: int = _DEFAULT_LIST_LIMIT,
+    offset: int = 0,
+    sort: ListSort = "rank",
+    watched: Optional[bool] = None,
+    search: Optional[str] = None,
+) -> dict:
     """
-    List the games the user is tracking, with list membership (backlog
-    watchlist / played rankings), rank, 100%-completion flag, and notes.
+    List tracked games in paginated results (default 50, maximum 100).
+    Use `offset` for the next page; `total` reports all matching items before
+    pagination. Sort by 'rank', 'title', or 'completed_at'; null values sort
+    last. `watched` filters played Rankings membership. Optionally search titles.
     """
     games = client().list_my_games()
-    return [
+    items = [
         {
             "game_id": g["game"]["id"],
             "title": g["game"]["title"],
@@ -322,6 +405,7 @@ def list_my_games() -> list[dict]:
         }
         for g in games
     ]
+    return _paginate_list(items, limit, offset, sort, watched, search)
 
 
 @mcp.tool()
