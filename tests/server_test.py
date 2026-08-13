@@ -1,6 +1,8 @@
 # pylint: disable=missing-module-docstring, missing-function-docstring, protected-access
 from unittest.mock import patch
 
+import pytest
+
 from druthers_mcp import server
 from druthers_mcp.api_client import ApiError
 
@@ -17,16 +19,22 @@ def test_list_my_movies_shapes_output(mock_client):
         }
     ]
     out = server.list_my_movies()
-    assert out == [
-        {
-            "movie_id": "m-1",
-            "title": "The Matrix",
-            "watched": True,
-            "notes": "classic",
-            "completed_at": "2024-05-01",
-            "rank": 2,
-        }
-    ]
+    assert out == {
+        "items": [
+            {
+                "movie_id": "m-1",
+                "title": "The Matrix",
+                "watched": True,
+                "notes": "classic",
+                "completed_at": "2024-05-01",
+                "rank": 2,
+            }
+        ],
+        "total": 1,
+        "limit": 50,
+        "offset": 0,
+        "unranked_count": 0,
+    }
 
 
 @patch("druthers_mcp.server.client")
@@ -82,18 +90,24 @@ def test_list_my_tv_shows_shapes_output(mock_client):
         }
     ]
     out = server.list_my_tv_shows()
-    assert out == [
-        {
-            "show_id": "s-1",
-            "title": "Severance",
-            "status": "Running",
-            "on_watchlist": True,
-            "on_rankings": False,
-            "rank": None,
-            "notes": "innie things",
-            "completed_at": "2024-05-01",
-        }
-    ]
+    assert out == {
+        "items": [
+            {
+                "show_id": "s-1",
+                "title": "Severance",
+                "status": "Running",
+                "on_watchlist": True,
+                "on_rankings": False,
+                "rank": None,
+                "notes": "innie things",
+                "completed_at": "2024-05-01",
+            }
+        ],
+        "total": 1,
+        "limit": 50,
+        "offset": 0,
+        "unranked_count": 1,
+    }
 
 
 @patch("druthers_mcp.server.client")
@@ -164,18 +178,24 @@ def test_list_my_books_shapes_output(mock_client):
         }
     ]
     out = server.list_my_books()
-    assert out == [
-        {
-            "book_id": "b-1",
-            "title": "Dune",
-            "authors": "Frank Herbert",
-            "on_watchlist": False,
-            "on_rankings": True,
-            "rank": 7,
-            "notes": "spice",
-            "completed_at": "2024-05-01",
-        }
-    ]
+    assert out == {
+        "items": [
+            {
+                "book_id": "b-1",
+                "title": "Dune",
+                "authors": "Frank Herbert",
+                "on_watchlist": False,
+                "on_rankings": True,
+                "rank": 7,
+                "notes": "spice",
+                "completed_at": "2024-05-01",
+            }
+        ],
+        "total": 1,
+        "limit": 50,
+        "offset": 0,
+        "unranked_count": 0,
+    }
 
 
 @patch("druthers_mcp.server.client")
@@ -202,18 +222,156 @@ def test_list_my_games_shapes_output(mock_client):
         }
     ]
     out = server.list_my_games()
-    assert out == [
-        {
-            "game_id": "g-1",
-            "title": "Breath of the Wild",
-            "on_watchlist": False,
-            "on_rankings": True,
-            "rank": 4,
-            "is_100_percent": True,
-            "notes": "korok hell",
-            "completed_at": "2024-05-01",
-        }
+    assert out == {
+        "items": [
+            {
+                "game_id": "g-1",
+                "title": "Breath of the Wild",
+                "on_watchlist": False,
+                "on_rankings": True,
+                "rank": 4,
+                "is_100_percent": True,
+                "notes": "korok hell",
+                "completed_at": "2024-05-01",
+            }
+        ],
+        "total": 1,
+        "limit": 50,
+        "offset": 0,
+        "unranked_count": 0,
+    }
+
+
+_LIST_TOOL_CASES = [
+    ("list_my_movies", "list_my_movies"),
+    ("list_my_tv_shows", "list_my_tv_shows"),
+    ("list_my_books", "list_my_books"),
+    ("list_my_games", "list_my_games"),
+]
+
+
+def _tracked_item(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    domain, item_id, title, rank, watched, completed_at=None
+):
+    media_key = {
+        "list_my_movies": "movie",
+        "list_my_tv_shows": "tv_show",
+        "list_my_books": "book",
+        "list_my_games": "game",
+    }[domain]
+    item = {
+        media_key: {"id": item_id, "title": title},
+        "rank": rank,
+        "completed_at": completed_at,
+    }
+    if domain == "list_my_movies":
+        item["completed"] = 1 if watched else 0
+    else:
+        item["on_rankings"] = watched
+        item["on_watchlist"] = not watched
+    return item
+
+
+@pytest.mark.parametrize(("tool_name", "client_method"), _LIST_TOOL_CASES)
+def test_list_tools_paginate_after_rank_sort_with_nulls_last(tool_name, client_method):
+    tracked = [
+        _tracked_item(client_method, "unranked", "Unranked", None, False),
+        _tracked_item(client_method, "third", "Third", 3, True),
+        _tracked_item(client_method, "first", "First", 1, True),
+        _tracked_item(client_method, "second", "Second", 2, True),
     ]
+    with patch("druthers_mcp.server.client") as mock_client:
+        getattr(mock_client.return_value, client_method).return_value = tracked
+
+        page = getattr(server, tool_name)(limit=2, offset=1)
+        past_end = getattr(server, tool_name)(limit=2, offset=10)
+
+    assert [item["rank"] for item in page["items"]] == [2, 3]
+    assert page["total"] == 4
+    assert page["limit"] == 2
+    assert page["offset"] == 1
+    assert page["unranked_count"] == 1
+    assert past_end["items"] == []
+    assert past_end["total"] == 4
+
+
+@pytest.mark.parametrize(("tool_name", "client_method"), _LIST_TOOL_CASES)
+def test_list_tools_filter_watched_status(tool_name, client_method):
+    tracked = [
+        _tracked_item(client_method, "done", "Finished", 1, True),
+        _tracked_item(client_method, "todo", "Not Finished", None, False),
+    ]
+    with patch("druthers_mcp.server.client") as mock_client:
+        getattr(mock_client.return_value, client_method).return_value = tracked
+
+        watched = getattr(server, tool_name)(watched=True)
+        unwatched = getattr(server, tool_name)(watched=False)
+
+    assert [item["title"] for item in watched["items"]] == ["Finished"]
+    assert watched["total"] == 1
+    assert watched["unranked_count"] == 0
+    assert [item["title"] for item in unwatched["items"]] == ["Not Finished"]
+    assert unwatched["total"] == 1
+    assert unwatched["unranked_count"] == 1
+
+
+@patch("druthers_mcp.server.client")
+def test_list_my_movies_searches_and_sorts_titles_and_completed_dates(mock_client):
+    mock_client.return_value.list_my_movies.return_value = [
+        _tracked_item("list_my_movies", "a", "The Matrix", 2, True, "1999-03-31"),
+        _tracked_item("list_my_movies", "b", "Matrix Reloaded", 1, True, "2003-05-15"),
+        _tracked_item("list_my_movies", "c", "Arrival", 3, True),
+    ]
+
+    searched = server.list_my_movies(search=" MATRIX ", sort="completed_at")
+    alphabetical = server.list_my_movies(sort="title")
+
+    assert [item["title"] for item in searched["items"]] == [
+        "Matrix Reloaded",
+        "The Matrix",
+    ]
+    assert searched["total"] == 2
+    assert [item["title"] for item in alphabetical["items"]] == [
+        "Arrival",
+        "Matrix Reloaded",
+        "The Matrix",
+    ]
+
+
+@patch("druthers_mcp.server.client")
+def test_list_my_movies_default_page_bounds_large_library(mock_client):
+    mock_client.return_value.list_my_movies.return_value = [
+        _tracked_item("list_my_movies", f"m-{index}", f"Movie {index}", index, True)
+        for index in range(1, 1302)
+    ]
+
+    out = server.list_my_movies()
+
+    assert len(out["items"]) == 50
+    assert out["total"] == 1301
+    assert out["limit"] == 50
+    assert out["offset"] == 0
+
+
+@patch("druthers_mcp.server.client")
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"limit": 0}, "limit must be between 1 and 100"),
+        ({"limit": 101}, "limit must be between 1 and 100"),
+        ({"offset": -1}, "offset must be zero or greater"),
+    ],
+)
+def test_list_my_movies_rejects_invalid_pagination(mock_client, kwargs, message):
+    mock_client.return_value.list_my_movies.return_value = []
+    with pytest.raises(ValueError, match=message):
+        server.list_my_movies(**kwargs)
+
+
+@pytest.mark.parametrize(("tool_name", "_client_method"), _LIST_TOOL_CASES)
+def test_list_tool_docstrings_describe_pagination_default(tool_name, _client_method):
+    docstring = getattr(server, tool_name).__doc__
+    assert "paginated results (default 50" in docstring
 
 
 @patch("druthers_mcp.server.client")
