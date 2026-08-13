@@ -123,7 +123,7 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         return self._request(
             "POST",
             f'/v1/users/me/movies/{movie["id"]}',
-            json={"completed": 0},
+            json={"on_watchlist": True},
         )
 
     def update_tracker(self, movie_id: str, **fields) -> dict:

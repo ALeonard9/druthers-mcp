@@ -8,6 +8,7 @@ watch marks. Runs over stdio.
 """
 
 import logging
+from datetime import date
 from typing import Literal, Optional
 
 try:
@@ -131,7 +132,7 @@ def list_my_movies(
         {
             "movie_id": m["movie"]["id"],
             "title": m["movie"]["title"],
-            "watched": m.get("completed") == 1,
+            "watched": m.get("completed_at") is not None,
             "notes": m.get("notes"),
             "completed_at": m.get("completed_at"),
             "rank": m.get("rank"),
@@ -163,10 +164,16 @@ def add_movie(tmdb_id: int, title: str, poster_url: Optional[str] = None) -> str
 @mcp.tool()
 def mark_watched(movie_id: str, watched: bool = True) -> str:
     """
-    Mark a tracked movie as watched (or not). `movie_id` is the id from
-    `list_my_movies`.
+    Mark a tracked movie as watched and remove it from the watchlist, or mark
+    it unwatched and return it to the watchlist. This records or clears the
+    completion date without adding the movie to Rankings or changing its rank.
+    `movie_id` is the id from `list_my_movies`.
     """
-    client().update_tracker(movie_id, completed=1 if watched else 0)
+    client().update_tracker(
+        movie_id,
+        on_watchlist=not watched,
+        completed_at=date.today().isoformat() if watched else None,
+    )
     return f'Marked movie {movie_id} as {"watched" if watched else "unwatched"}.'
 
 
