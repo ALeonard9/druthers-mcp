@@ -1,4 +1,5 @@
 # pylint: disable=missing-module-docstring, missing-function-docstring, protected-access
+from datetime import date
 from unittest.mock import patch
 
 import pytest
@@ -59,7 +60,17 @@ def test_movie_detail_passthrough(mock_client):
 @patch("druthers_mcp.server.client")
 def test_mark_watched_updates_tracker(mock_client):
     server.mark_watched("m-1", watched=True)
-    mock_client.return_value.update_tracker.assert_called_once_with("m-1", completed=1)
+    mock_client.return_value.update_tracker.assert_called_once_with(
+        "m-1", on_watchlist=False, completed_at=date.today().isoformat()
+    )
+
+
+@patch("druthers_mcp.server.client")
+def test_mark_unwatched_returns_movie_to_watchlist(mock_client):
+    server.mark_watched("m-1", watched=False)
+    mock_client.return_value.update_tracker.assert_called_once_with(
+        "m-1", on_watchlist=True, completed_at=None
+    )
 
 
 @patch("druthers_mcp.server.client")
@@ -253,6 +264,8 @@ _LIST_TOOL_CASES = [
 def _tracked_item(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     domain, item_id, title, rank, watched, completed_at=None
 ):
+    if domain == "list_my_movies" and watched and completed_at is None:
+        completed_at = "2024-01-01"
     media_key = {
         "list_my_movies": "movie",
         "list_my_tv_shows": "tv_show",
