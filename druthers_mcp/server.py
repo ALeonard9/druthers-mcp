@@ -91,7 +91,7 @@ def _paginate_list(  # pylint: disable=too-many-arguments,too-many-positional-ar
         populated.sort(key=lambda item: item[sort], reverse=sort == "completed_at")
     ordered = populated + missing
     return {
-        "items": ordered[offset : offset + limit],
+        "items": ordered,
         "total": len(filtered),
         "limit": limit,
         "offset": offset,
@@ -123,11 +123,16 @@ def list_my_movies(
 ) -> dict:
     """
     List tracked movies in paginated results (default 50, maximum 100).
-    Use `offset` for the next page; `total` reports all matching items before
-    pagination. Sort by 'rank', 'title', or 'completed_at'; null values sort
-    last. Optionally filter by watched status or search titles.
+    Use `offset` for the next page.
+    Note: Until API support lands, sorting and searching are page-local.
+    `total` and `unranked_count` reflect only the current page.
+    Sort by 'rank', 'title', or 'completed_at'; null values sort last.
+    Optionally filter by watched status or search titles.
     """
-    movies = client().list_my_movies()
+    on_watchlist = (not watched) if watched is not None else None
+    movies = client().list_my_movies(
+        limit=limit, offset=offset, on_watchlist=on_watchlist
+    )
     items = [
         {
             "movie_id": m["movie"]["id"],
@@ -207,11 +212,13 @@ def list_my_tv_shows(
 ) -> dict:
     """
     List tracked TV shows in paginated results (default 50, maximum 100).
-    Use `offset` for the next page; `total` reports all matching items before
-    pagination. Sort by 'rank', 'title', or 'completed_at'; null values sort
-    last. `watched` filters Rankings membership. Optionally search titles.
+    Use `offset` for the next page.
+    Note: Until API support lands, sorting and searching are page-local.
+    `total` and `unranked_count` reflect only the current page.
+    Sort by 'rank', 'title', or 'completed_at'; null values sort last.
+    `watched` filters Rankings membership. Optionally search titles.
     """
-    shows = client().list_my_tv_shows()
+    shows = client().list_my_tv_shows(limit=limit, offset=offset, on_rankings=watched)
     items = [
         {
             "show_id": s["tv_show"]["id"],
@@ -320,11 +327,13 @@ def list_my_books(
 ) -> dict:
     """
     List tracked books in paginated results (default 50, maximum 100).
-    Use `offset` for the next page; `total` reports all matching items before
-    pagination. Sort by 'rank', 'title', or 'completed_at'; null values sort
-    last. `watched` filters read Rankings membership. Optionally search titles.
+    Use `offset` for the next page.
+    Note: Until API support lands, sorting and searching are page-local.
+    `total` and `unranked_count` reflect only the current page.
+    Sort by 'rank', 'title', or 'completed_at'; null values sort last.
+    `watched` filters read Rankings membership. Optionally search titles.
     """
-    books = client().list_my_books()
+    books = client().list_my_books(limit=limit, offset=offset, on_rankings=watched)
     items = [
         {
             "book_id": b["book"]["id"],
@@ -394,11 +403,13 @@ def list_my_games(
 ) -> dict:
     """
     List tracked games in paginated results (default 50, maximum 100).
-    Use `offset` for the next page; `total` reports all matching items before
-    pagination. Sort by 'rank', 'title', or 'completed_at'; null values sort
-    last. `watched` filters played Rankings membership. Optionally search titles.
+    Use `offset` for the next page.
+    Note: Until API support lands, sorting and searching are page-local.
+    `total` and `unranked_count` reflect only the current page.
+    Sort by 'rank', 'title', or 'completed_at'; null values sort last.
+    `watched` filters played Rankings membership. Optionally search titles.
     """
-    games = client().list_my_games()
+    games = client().list_my_games(limit=limit, offset=offset, on_rankings=watched)
     items = [
         {
             "game_id": g["game"]["id"],

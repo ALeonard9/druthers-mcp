@@ -36,6 +36,9 @@ def test_list_my_movies_shapes_output(mock_client):
         "offset": 0,
         "unranked_count": 0,
     }
+    mock_client.return_value.list_my_movies.assert_called_once_with(
+        limit=50, offset=0, on_watchlist=None
+    )
 
 
 @patch("druthers_mcp.server.client")
@@ -119,6 +122,9 @@ def test_list_my_tv_shows_shapes_output(mock_client):
         "offset": 0,
         "unranked_count": 1,
     }
+    mock_client.return_value.list_my_tv_shows.assert_called_once_with(
+        limit=50, offset=0, on_rankings=None
+    )
 
 
 @patch("druthers_mcp.server.client")
@@ -207,6 +213,9 @@ def test_list_my_books_shapes_output(mock_client):
         "offset": 0,
         "unranked_count": 0,
     }
+    mock_client.return_value.list_my_books.assert_called_once_with(
+        limit=50, offset=0, on_rankings=None
+    )
 
 
 @patch("druthers_mcp.server.client")
@@ -251,6 +260,9 @@ def test_list_my_games_shapes_output(mock_client):
         "offset": 0,
         "unranked_count": 0,
     }
+    mock_client.return_value.list_my_games.assert_called_once_with(
+        limit=50, offset=0, on_rankings=None
+    )
 
 
 _LIST_TOOL_CASES = [
@@ -286,7 +298,7 @@ def _tracked_item(  # pylint: disable=too-many-arguments,too-many-positional-arg
 
 
 @pytest.mark.parametrize(("tool_name", "client_method"), _LIST_TOOL_CASES)
-def test_list_tools_paginate_after_rank_sort_with_nulls_last(tool_name, client_method):
+def test_list_tools_sort_page_with_nulls_last(tool_name, client_method):
     tracked = [
         _tracked_item(client_method, "unranked", "Unranked", None, False),
         _tracked_item(client_method, "third", "Third", 3, True),
@@ -297,25 +309,33 @@ def test_list_tools_paginate_after_rank_sort_with_nulls_last(tool_name, client_m
         getattr(mock_client.return_value, client_method).return_value = tracked
 
         page = getattr(server, tool_name)(limit=2, offset=1)
-        past_end = getattr(server, tool_name)(limit=2, offset=10)
 
-    assert [item["rank"] for item in page["items"]] == [2, 3]
+    assert [item["rank"] for item in page["items"]] == [1, 2, 3, None]
     assert page["total"] == 4
     assert page["limit"] == 2
     assert page["offset"] == 1
     assert page["unranked_count"] == 1
-    assert past_end["items"] == []
-    assert past_end["total"] == 4
+
+    mock_api = getattr(mock_client.return_value, client_method)
+    if client_method == "list_my_movies":
+        mock_api.assert_called_with(limit=2, offset=1, on_watchlist=None)
+    else:
+        mock_api.assert_called_with(limit=2, offset=1, on_rankings=None)
 
 
 @pytest.mark.parametrize(("tool_name", "client_method"), _LIST_TOOL_CASES)
 def test_list_tools_filter_watched_status(tool_name, client_method):
-    tracked = [
+    tracked_watched = [
         _tracked_item(client_method, "done", "Finished", 1, True),
+    ]
+    tracked_unwatched = [
         _tracked_item(client_method, "todo", "Not Finished", None, False),
     ]
     with patch("druthers_mcp.server.client") as mock_client:
-        getattr(mock_client.return_value, client_method).return_value = tracked
+        getattr(mock_client.return_value, client_method).side_effect = [
+            tracked_watched,
+            tracked_unwatched,
+        ]
 
         watched = getattr(server, tool_name)(watched=True)
         unwatched = getattr(server, tool_name)(watched=False)
@@ -326,6 +346,14 @@ def test_list_tools_filter_watched_status(tool_name, client_method):
     assert [item["title"] for item in unwatched["items"]] == ["Not Finished"]
     assert unwatched["total"] == 1
     assert unwatched["unranked_count"] == 1
+
+    mock_api = getattr(mock_client.return_value, client_method)
+    if client_method == "list_my_movies":
+        mock_api.assert_any_call(limit=50, offset=0, on_watchlist=False)
+        mock_api.assert_any_call(limit=50, offset=0, on_watchlist=True)
+    else:
+        mock_api.assert_any_call(limit=50, offset=0, on_rankings=True)
+        mock_api.assert_any_call(limit=50, offset=0, on_rankings=False)
 
 
 @patch("druthers_mcp.server.client")
@@ -355,15 +383,18 @@ def test_list_my_movies_searches_and_sorts_titles_and_completed_dates(mock_clien
 def test_list_my_movies_default_page_bounds_large_library(mock_client):
     mock_client.return_value.list_my_movies.return_value = [
         _tracked_item("list_my_movies", f"m-{index}", f"Movie {index}", index, True)
-        for index in range(1, 1302)
+        for index in range(1, 51)
     ]
 
     out = server.list_my_movies()
 
     assert len(out["items"]) == 50
-    assert out["total"] == 1301
+    assert out["total"] == 50
     assert out["limit"] == 50
     assert out["offset"] == 0
+    mock_client.return_value.list_my_movies.assert_called_once_with(
+        limit=50, offset=0, on_watchlist=None
+    )
 
 
 @patch("druthers_mcp.server.client")
