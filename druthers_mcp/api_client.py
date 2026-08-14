@@ -89,9 +89,21 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         """Search the catalog (TMDB proxy) for movies matching ``query``."""
         return self._request("GET", "/v1/movies/search", params={"q": query})
 
-    def list_my_movies(self) -> list[dict]:
+    def list_my_movies(
+        self,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        on_watchlist: Optional[bool] = None,
+    ) -> list[dict]:
         """Return the authenticated user's tracked movies."""
-        return self._request("GET", "/v1/users/me/movies")
+        params = {}
+        if limit is not None:
+            params["limit"] = limit
+        if offset is not None:
+            params["offset"] = offset
+        if on_watchlist is not None:
+            params["on_watchlist"] = on_watchlist
+        return self._request("GET", "/v1/users/me/movies", params=params)
 
     def get_movie_detail(self, movie_id: str) -> dict:
         """Return full detail (plot, director, cast, genre, ...) for a movie."""
@@ -135,9 +147,21 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         """Search the catalog (TVMaze proxy) for TV shows matching ``query``."""
         return self._request("GET", "/v1/tv-shows/search", params={"q": query})
 
-    def list_my_tv_shows(self) -> list[dict]:
+    def list_my_tv_shows(
+        self,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        on_rankings: Optional[bool] = None,
+    ) -> list[dict]:
         """Return the authenticated user's tracked TV shows."""
-        return self._request("GET", "/v1/users/me/tv-shows")
+        params = {}
+        if limit is not None:
+            params["limit"] = limit
+        if offset is not None:
+            params["offset"] = offset
+        if on_rankings is not None:
+            params["on_rankings"] = on_rankings
+        return self._request("GET", "/v1/users/me/tv-shows", params=params)
 
     def get_tv_show_detail(self, show_id: str) -> dict:
         """Return full detail (summary, genres, network, ...) for a show."""
@@ -211,9 +235,21 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         """Search the catalog (Open Library proxy) for books matching ``query``."""
         return self._request("GET", "/v1/books/search", params={"q": query})
 
-    def list_my_books(self) -> list[dict]:
+    def list_my_books(
+        self,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        on_rankings: Optional[bool] = None,
+    ) -> list[dict]:
         """Return the authenticated user's tracked books."""
-        return self._request("GET", "/v1/users/me/books")
+        params = {}
+        if limit is not None:
+            params["limit"] = limit
+        if offset is not None:
+            params["offset"] = offset
+        if on_rankings is not None:
+            params["on_rankings"] = on_rankings
+        return self._request("GET", "/v1/users/me/books", params=params)
 
     def get_book_detail(self, book_id: str) -> dict:
         """Return full detail (description, authors, subjects, ...) for a book."""
@@ -255,9 +291,21 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         """Search the catalog (IGDB proxy) for games matching ``query``."""
         return self._request("GET", "/v1/games/search", params={"q": query})
 
-    def list_my_games(self) -> list[dict]:
+    def list_my_games(
+        self,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        on_rankings: Optional[bool] = None,
+    ) -> list[dict]:
         """Return the authenticated user's tracked games."""
-        return self._request("GET", "/v1/users/me/games")
+        params = {}
+        if limit is not None:
+            params["limit"] = limit
+        if offset is not None:
+            params["offset"] = offset
+        if on_rankings is not None:
+            params["on_rankings"] = on_rankings
+        return self._request("GET", "/v1/users/me/games", params=params)
 
     def get_game_detail(self, game_id: str) -> dict:
         """Return full detail (summary, genres, platforms, ...) for a game."""
