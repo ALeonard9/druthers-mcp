@@ -3,7 +3,7 @@ aleonard.us MCP server.
 
 Exposes the personal media trackers (Movies, TV, Books) as MCP
 tools backed by the aleonard.us API, so an LLM (e.g. Claude) can search,
-list, add, and annotate them on the user's behalf — including TV episode
+list, add, and annotate them on the user's behalf - including TV episode
 watch marks. Runs over stdio.
 """
 

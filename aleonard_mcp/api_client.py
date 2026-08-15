@@ -26,7 +26,7 @@ class ApiClient:  # pylint: disable=too-many-public-methods
     """
     Authenticated client for the aleonard.us API.
 
-    A deliberately flat wrapper — one method per endpoint, grouped by domain
+    A deliberately flat wrapper - one method per endpoint, grouped by domain
     (movies/tv/books/games), so it grows past pylint's method
     ceiling by design.
     """

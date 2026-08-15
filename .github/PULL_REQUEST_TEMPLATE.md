@@ -1,7 +1,7 @@
 ## Summary
 
 <!--
-Bullets. Lead with the cause, then the fix — not a changelog of files touched.
+Bullets. Lead with the cause, then the fix - not a changelog of files touched.
 Say what does NOT change if that's load-bearing.
 -->
 
@@ -14,7 +14,7 @@ Checked boxes with real evidence: actual pass counts, the specific cases added,
 and what you exercised through the MCP Inspector against the local API.
 -->
 
-- [ ] `task test` — N passed, including <the new cases>
+- [ ] `task test` - N passed, including <the new cases>
 - [ ] `task lint` clean
 - [ ] Exercised via MCP Inspector (`task dev`) against the local API: <tool called, result>
 
