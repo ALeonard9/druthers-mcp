@@ -3,7 +3,7 @@ Druthers MCP server.
 
 Exposes the personal media trackers (Movies, TV, Books) as MCP
 tools backed by the Druthers API, so an LLM (e.g. Claude) can search,
-list, add, and annotate them on the user's behalf — including TV episode
+list, add, and annotate them on the user's behalf - including TV episode
 watch marks. Runs over stdio.
 """
 
@@ -687,7 +687,7 @@ def compare_users(handle: str, domain: Optional[str] = None) -> dict:
 # The nine visibility settings an assistant can read or change, keyed by the
 # short names used in the tool args and responses (mcp#36). The values are
 # the DbUser tier columns the API accepts, so a new domain shows up here by
-# hand — mirroring the shelf registry on the API side.
+# hand - mirroring the shelf registry on the API side.
 _VISIBILITY_TARGETS = {
     "profile": "visibility_profile",
     "movies": "visibility_movies",
@@ -724,7 +724,7 @@ def get_visibility() -> dict:
     games), and each shelf's watchlist. Each setting is one of 'private'
     (only you can see it), 'friends' (your accepted friends can see it), or
     'public' (anyone on the internet can see it). A null shelf tier inherits
-    'default_privacy'. Do not treat 'public' as a casual setting — it exposes
+    'default_privacy'. Do not treat 'public' as a casual setting - it exposes
     the list on your public profile page to anyone, logged in or not.
     """
     return _shape_visibility(client().get_visibility())

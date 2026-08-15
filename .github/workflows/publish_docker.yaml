@@ -45,5 +45,5 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           # No artifact-attestation step: actions/attest-build-provenance
           # requires a public repo or GitHub Enterprise (fails with "Feature
-          # not available for user-owned private repositories" otherwise) —
+          # not available for user-owned private repositories" otherwise) -
           # this repo is private.
