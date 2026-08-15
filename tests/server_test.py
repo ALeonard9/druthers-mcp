@@ -881,3 +881,90 @@ def test_visibility_tool_descriptions_state_what_each_tier_exposes():
         assert "public" in desc
         assert "internet" in desc
     assert "watchlist" in by_name["set_visibility"]
+
+
+# Tests for ranking and duels (mcp#56)
+@patch("druthers_mcp.server.client")
+def test_rank_item(mock_client):
+    server._duel_states["movies"] = {"queue": []}
+    msg = server.rank_item("movies", "m-1", 3)
+    mock_client.return_value.rank_item.assert_called_once_with("movies", "m-1", 3)
+    assert "Ranked item m-1 at position 3" in msg
+    assert "movies" not in server._duel_states
+
+
+@patch("druthers_mcp.server.client")
+def test_get_next_duel_no_unranked(mock_client):
+    mock_client.return_value.list_my_movies.return_value = [
+        {"movie": {"id": "m-1", "title": "A"}, "rank": 1}
+    ]
+    out = server.get_next_duel("movies")
+    assert "No unranked items found" in out
+
+
+@patch("druthers_mcp.server.client")
+def test_get_next_duel_initializes_state_and_returns_mid(mock_client):
+    mock_client.return_value.list_my_movies.return_value = [
+        {"movie": {"id": "m-u", "title": "Unranked"}, "rank": None},
+        {"movie": {"id": "m-1", "title": "First"}, "rank": 1},
+        {"movie": {"id": "m-2", "title": "Second"}, "rank": 2},
+        {"movie": {"id": "m-3", "title": "Third"}, "rank": 3},
+    ]
+    server._duel_states.clear()
+
+    out = server.get_next_duel("movies")
+
+    assert "Which is better" in out["message"]
+    assert out["candidate1"]["id"] == "m-u"
+    assert out["candidate2"]["id"] == "m-2"
+
+    state = server._duel_states["movies"]
+    assert state["low"] == 0
+    assert state["high"] == 2
+    assert state["mid"] == 1
+
+
+def test_submit_duel_result_advances_binary_search():
+    server._duel_states["movies"] = {
+        "queue": [{"id": "m-u", "title": "Unranked", "rank": None}],
+        "ranked": [
+            {"id": "m-1", "title": "First", "rank": 1},
+            {"id": "m-2", "title": "Second", "rank": 2},
+            {"id": "m-3", "title": "Third", "rank": 3},
+        ],
+        "unplaced": {"id": "m-u", "title": "Unranked", "rank": None},
+        "low": 0,
+        "high": 2,
+        "mid": 1,
+    }
+
+    out = server.submit_duel_result("movies", "m-u", "m-2")
+
+    assert "Result recorded" in out
+    assert "Next comparison: Unranked vs First" in out
+    state = server._duel_states["movies"]
+    assert state["high"] == 0
+    assert state["low"] == 0
+    assert state["mid"] == 0
+
+
+@patch("druthers_mcp.server.client")
+def test_submit_duel_result_completes_and_places(mock_client):
+    server._duel_states["movies"] = {
+        "queue": [{"id": "m-u", "title": "Unranked", "rank": None}],
+        "ranked": [
+            {"id": "m-1", "title": "First", "rank": 1},
+            {"id": "m-2", "title": "Second", "rank": 2},
+            {"id": "m-3", "title": "Third", "rank": 3},
+        ],
+        "unplaced": {"id": "m-u", "title": "Unranked", "rank": None},
+        "low": 0,
+        "high": 0,
+        "mid": 0,
+    }
+
+    out = server.submit_duel_result("movies", "m-1", "m-u")
+
+    mock_client.return_value.rank_item.assert_called_once_with("movies", "m-u", 2)
+    assert "ranked at position 2" in out
+    assert "movies" not in server._duel_states
