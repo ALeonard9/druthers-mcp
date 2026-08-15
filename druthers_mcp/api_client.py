@@ -1,5 +1,5 @@
 """
-HTTP client for the aleonard.us API.
+HTTP client for the Druthers API.
 
 Thin wrapper over the ``/v1`` endpoints the MCP tools need. Handles token
 acquisition (either a pre-issued ``API_TOKEN`` or an email/password exchange)
@@ -10,7 +10,7 @@ from typing import Any, Optional
 
 import httpx
 
-from aleonard_mcp.config import Settings, get_settings
+from druthers_mcp.config import Settings, get_settings
 
 
 class ApiError(Exception):
@@ -24,7 +24,7 @@ class ApiError(Exception):
 
 class ApiClient:  # pylint: disable=too-many-public-methods
     """
-    Authenticated client for the aleonard.us API.
+    Authenticated client for the Druthers API.
 
     A deliberately flat wrapper - one method per endpoint, grouped by domain
     (movies/tv/books/games), so it grows past pylint's method
@@ -53,7 +53,8 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         s = self._settings
         if not (s.api_email and s.api_password):
             raise ApiError(
-                401, "No API_TOKEN and no API_EMAIL/API_PASSWORD to log in with"
+                401,
+                f"No API_TOKEN and no API_EMAIL/API_PASSWORD to log in with (env: {s.env})",
             )
         resp = self._client.post(
             "/v1/auth/token",
@@ -88,9 +89,21 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         """Search the catalog (TMDB proxy) for movies matching ``query``."""
         return self._request("GET", "/v1/movies/search", params={"q": query})
 
-    def list_my_movies(self) -> list[dict]:
+    def list_my_movies(
+        self,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        on_watchlist: Optional[bool] = None,
+    ) -> list[dict]:
         """Return the authenticated user's tracked movies."""
-        return self._request("GET", "/v1/users/me/movies")
+        params = {}
+        if limit is not None:
+            params["limit"] = limit
+        if offset is not None:
+            params["offset"] = offset
+        if on_watchlist is not None:
+            params["on_watchlist"] = on_watchlist
+        return self._request("GET", "/v1/users/me/movies", params=params)
 
     def get_movie_detail(self, movie_id: str) -> dict:
         """Return full detail (plot, director, cast, genre, ...) for a movie."""
@@ -122,7 +135,7 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         return self._request(
             "POST",
             f'/v1/users/me/movies/{movie["id"]}',
-            json={"completed": 0},
+            json={"on_watchlist": True},
         )
 
     def update_tracker(self, movie_id: str, **fields) -> dict:
@@ -134,9 +147,21 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         """Search the catalog (TVMaze proxy) for TV shows matching ``query``."""
         return self._request("GET", "/v1/tv-shows/search", params={"q": query})
 
-    def list_my_tv_shows(self) -> list[dict]:
+    def list_my_tv_shows(
+        self,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        on_rankings: Optional[bool] = None,
+    ) -> list[dict]:
         """Return the authenticated user's tracked TV shows."""
-        return self._request("GET", "/v1/users/me/tv-shows")
+        params = {}
+        if limit is not None:
+            params["limit"] = limit
+        if offset is not None:
+            params["offset"] = offset
+        if on_rankings is not None:
+            params["on_rankings"] = on_rankings
+        return self._request("GET", "/v1/users/me/tv-shows", params=params)
 
     def get_tv_show_detail(self, show_id: str) -> dict:
         """Return full detail (summary, genres, network, ...) for a show."""
@@ -210,9 +235,21 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         """Search the catalog (Open Library proxy) for books matching ``query``."""
         return self._request("GET", "/v1/books/search", params={"q": query})
 
-    def list_my_books(self) -> list[dict]:
+    def list_my_books(
+        self,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        on_rankings: Optional[bool] = None,
+    ) -> list[dict]:
         """Return the authenticated user's tracked books."""
-        return self._request("GET", "/v1/users/me/books")
+        params = {}
+        if limit is not None:
+            params["limit"] = limit
+        if offset is not None:
+            params["offset"] = offset
+        if on_rankings is not None:
+            params["on_rankings"] = on_rankings
+        return self._request("GET", "/v1/users/me/books", params=params)
 
     def get_book_detail(self, book_id: str) -> dict:
         """Return full detail (description, authors, subjects, ...) for a book."""
@@ -254,9 +291,21 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         """Search the catalog (IGDB proxy) for games matching ``query``."""
         return self._request("GET", "/v1/games/search", params={"q": query})
 
-    def list_my_games(self) -> list[dict]:
+    def list_my_games(
+        self,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        on_rankings: Optional[bool] = None,
+    ) -> list[dict]:
         """Return the authenticated user's tracked games."""
-        return self._request("GET", "/v1/users/me/games")
+        params = {}
+        if limit is not None:
+            params["limit"] = limit
+        if offset is not None:
+            params["offset"] = offset
+        if on_rankings is not None:
+            params["on_rankings"] = on_rankings
+        return self._request("GET", "/v1/users/me/games", params=params)
 
     def get_game_detail(self, game_id: str) -> dict:
         """Return full detail (summary, genres, platforms, ...) for a game."""
@@ -292,6 +341,28 @@ class ApiClient:  # pylint: disable=too-many-public-methods
     def update_game_tracker(self, game_id: str, **fields) -> dict:
         """Update the user's tracker for a catalog game id."""
         return self._request("PUT", f"/v1/users/me/games/{game_id}", json=fields)
+
+    def rank_item(self, domain: str, item_id: str, target_position: int) -> dict:
+        """Place an item at an exact 1-based position in the ranked list."""
+        return self._request(
+            "PUT",
+            f"/v1/users/me/{domain}/{item_id}/rank",
+            json={"position": target_position},
+        )
+
+    # --- comparison ---
+    def compare_with_user(self, handle: str) -> dict:
+        """Get comparison data for all domains against another user."""
+        return self._request("GET", f"/v1/users/me/comparison/{handle}")
+
+    # --- visibility ---
+    def get_visibility(self) -> dict:
+        """Return the authenticated user's visibility tiers and claimed handle."""
+        return self._request("GET", "/v1/users/me/visibility")
+
+    def update_visibility(self, **fields) -> dict:
+        """Update visibility tiers and/or the handle; only sent fields change."""
+        return self._request("PUT", "/v1/users/me/visibility", json=fields)
 
 
 def _detail(resp: httpx.Response) -> str:

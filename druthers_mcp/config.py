@@ -16,7 +16,7 @@ class Settings:  # pylint: disable=too-many-instance-attributes
     request_timeout: float = float(os.getenv("API_TIMEOUT", "15"))
     log_level: str = os.getenv("LOG_LEVEL", "INFO")
     lz: str | None = os.getenv("LZ")
-    env: str = os.getenv("ENV", "local")
+    env: str = os.getenv("MCP_ENV", "prod")
 
 
 def get_settings() -> Settings:
