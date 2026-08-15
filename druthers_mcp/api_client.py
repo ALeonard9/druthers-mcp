@@ -342,6 +342,14 @@ class ApiClient:  # pylint: disable=too-many-public-methods
         """Update the user's tracker for a catalog game id."""
         return self._request("PUT", f"/v1/users/me/games/{game_id}", json=fields)
 
+    def rank_item(self, domain: str, item_id: str, target_position: int) -> dict:
+        """Place an item at an exact 1-based position in the ranked list."""
+        return self._request(
+            "PUT",
+            f"/v1/users/me/{domain}/{item_id}/rank",
+            json={"position": target_position},
+        )
+
     # --- comparison ---
     def compare_with_user(self, handle: str) -> dict:
         """Get comparison data for all domains against another user."""

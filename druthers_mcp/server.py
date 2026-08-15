@@ -466,6 +466,149 @@ def mark_game_100_percent(game_id: str, is_100_percent: bool = True) -> str:
     return f"Marked game {game_id} as {state}."
 
 
+_duel_states: dict[str, dict] = {}
+
+
+@mcp.tool()
+def rank_item(domain: str, item_id: str, target_position: int) -> str:
+    """
+    Place an item at an exact 1-based position in your Rankings.
+    domain must be one of: 'movies', 'tv-shows', 'books', 'games'.
+    """
+    if domain not in ("movies", "tv-shows", "books", "games"):
+        return "error: domain must be one of 'movies', 'tv-shows', 'books', 'games'"
+    client().rank_item(domain, item_id, target_position)
+    if domain in _duel_states:
+        del _duel_states[domain]
+    return f"Ranked item {item_id} at position {target_position} in {domain}."
+
+
+def _get_duel_entries(domain: str) -> list[dict]:
+    if domain == "movies":
+        raw = client().list_my_movies(limit=100, on_watchlist=False)
+        return [
+            {
+                "id": m["movie"]["id"],
+                "title": m["movie"]["title"],
+                "rank": m.get("rank"),
+            }
+            for m in raw
+        ]
+    if domain == "tv-shows":
+        raw = client().list_my_tv_shows(limit=100, on_rankings=True)
+        return [
+            {
+                "id": m["tv_show"]["id"],
+                "title": m["tv_show"]["title"],
+                "rank": m.get("rank"),
+            }
+            for m in raw
+        ]
+    if domain == "books":
+        raw = client().list_my_books(limit=100, on_rankings=True)
+        return [
+            {"id": m["book"]["id"], "title": m["book"]["title"], "rank": m.get("rank")}
+            for m in raw
+        ]
+    if domain == "games":
+        raw = client().list_my_games(limit=100, on_rankings=True)
+        return [
+            {"id": m["game"]["id"], "title": m["game"]["title"], "rank": m.get("rank")}
+            for m in raw
+        ]
+    raise ValueError(f"Unknown domain: {domain}")
+
+
+@mcp.tool()
+def get_next_duel(domain: str) -> dict | str:
+    """
+    Retrieve the next pairwise comparison to place an unranked item into your Rankings.
+    Returns a dict with 'candidate1' and 'candidate2', or a message if no duels are needed.
+    domain must be one of: 'movies', 'tv-shows', 'books', 'games'.
+    """
+    if domain not in ("movies", "tv-shows", "books", "games"):
+        return "error: domain must be one of 'movies', 'tv-shows', 'books', 'games'"
+
+    state = _duel_states.get(domain)
+
+    if not state or not state.get("queue"):
+        entries = _get_duel_entries(domain)
+        ranked = sorted(
+            [e for e in entries if e["rank"] is not None], key=lambda x: x["rank"]
+        )
+        queue = sorted(
+            [e for e in entries if e["rank"] is None], key=lambda x: x["title"]
+        )
+
+        if not queue:
+            return f"No unranked items found in {domain}."
+
+        unplaced = queue[0]
+        if not ranked:
+            return (
+                f"Only one unranked item ({unplaced['title']}) and no ranked items. "
+                "Use rank_item to place it at position 1."
+            )
+
+        state = {
+            "queue": queue,
+            "ranked": ranked,
+            "unplaced": unplaced,
+            "low": 0,
+            "high": len(ranked) - 1,
+            "mid": (len(ranked) - 1) // 2,
+        }
+        _duel_states[domain] = state
+
+    unplaced = state["unplaced"]
+    ranked_cmp = state["ranked"][state["mid"]]
+
+    return {
+        "message": "Which is better? Provide the winner_id and loser_id to submit_duel_result.",
+        "candidate1": unplaced,
+        "candidate2": ranked_cmp,
+    }
+
+
+@mcp.tool()
+def submit_duel_result(domain: str, winner_id: str, loser_id: str) -> str:
+    """
+    Record the result of a conversational duel and advance the ranking process.
+    If this determines the final position, it will be saved and the next duel loaded.
+    """
+    state = _duel_states.get(domain)
+    if not state:
+        return "error: No active duel state. Call get_next_duel first."
+
+    unplaced = state["unplaced"]
+    ranked_cmp = state["ranked"][state["mid"]]
+
+    valid_ids = {unplaced["id"], ranked_cmp["id"]}
+    if winner_id not in valid_ids or loser_id not in valid_ids or winner_id == loser_id:
+        return "error: winner_id and loser_id must be the two candidates currently dueling."
+
+    if winner_id == unplaced["id"]:
+        state["high"] = state["mid"] - 1
+    else:
+        state["low"] = state["mid"] + 1
+
+    if state["low"] > state["high"]:
+        target_position = state["low"] + 1
+        client().rank_item(domain, unplaced["id"], target_position)
+        del _duel_states[domain]
+        return (
+            f"Item '{unplaced['title']}' has been ranked at position {target_position}! "
+            "Call get_next_duel to rank the next item."
+        )
+
+    state["mid"] = (state["low"] + state["high"]) // 2
+    next_cmp = state["ranked"][state["mid"]]
+    return (
+        f"Result recorded. Next comparison: {unplaced['title']} vs {next_cmp['title']}. "
+        "Call get_next_duel to see details or submit_duel_result to continue."
+    )
+
+
 def _format_comparison_domain(d: dict) -> dict | str:
     if not d.get("rankings_visible"):
         return "Visibility limit: Rankings are private. Cannot compare lists."
