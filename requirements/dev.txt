@@ -4,4 +4,4 @@ pytest-asyncio==1.4.0
 pytest-testmon==2.2.0  # pre-push: run only tests affected by changes
 black==26.5.1
 pylint==4.0.7
-pre-commit==4.6.1
+pre-commit==4.6.2
