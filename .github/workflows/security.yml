@@ -14,7 +14,6 @@ jobs:
       builds_image: true
       block: true
       severity: "CRITICAL,HIGH"
-    secrets: inherit
     permissions:
       contents: read
       security-events: write
